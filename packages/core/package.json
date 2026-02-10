@@ -20,9 +20,9 @@
     }
   },
   "bin": {
-    "a11y-ai": "./dist/cli.mjs"
+    "a11y-ai": "./bin/a11y-ai.mjs"
   },
-  "files": ["dist"],
+  "files": ["dist", "bin"],
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
@@ -32,4 +32,3 @@
     "axe-core": "^4.10.0"
   }
 }
-
