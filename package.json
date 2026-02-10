@@ -1,33 +1,18 @@
 {
-  "name": "a11y-ai",
+  "name": "a11y-ai-workspace",
   "version": "0.0.0",
-  "description": "AI-powered accessibility auditor built on axe-core + AI analysis.",
+  "description": "Workspace root for a11y-ai packages.",
   "license": "MIT",
   "type": "module",
+  "private": true,
   "packageManager": "pnpm@9.15.4",
   "engines": {
     "node": ">=18"
   },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.mjs",
-      "require": "./dist/cli.cjs"
-    }
-  },
-  "bin": {
-    "a11y-ai": "./dist/cli.mjs"
-  },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsup"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

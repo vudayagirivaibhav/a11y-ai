@@ -10,11 +10,20 @@ import type { AiHandler } from './ai.js';
  * - aggregate results by rule name
  * - build UI mappings / docs without guessing
  */
-export type AiRuleName =
-  | 'alt-text-quality'
-  | 'link-text-quality'
-  | 'contrast-analysis'
-  | 'form-label-relevance';
+export const BUILTIN_AI_RULES = [
+  'alt-text-quality',
+  'link-text-quality',
+  'contrast-analysis',
+  'form-label-relevance',
+] as const;
+
+/**
+ * Rule name identifier for AI checks.
+ *
+ * Includes known built-ins (for autocomplete) but remains open to custom/3rd-party
+ * rule names so we can expand without breaking existing consumers.
+ */
+export type AiRuleName = (typeof BUILTIN_AI_RULES)[number] | (string & {});
 
 /**
  * Optional rule filtering for AI checks.
@@ -22,7 +31,10 @@ export type AiRuleName =
  * If both `include` and `exclude` are provided, `exclude` wins for overlaps.
  */
 export type RuleFilter = {
+  /** Explicit allow-list of AI rule names to run. */
   include?: AiRuleName[];
+
+  /** Explicit deny-list of AI rule names to skip. */
   exclude?: AiRuleName[];
 };
 
@@ -33,11 +45,54 @@ export type RuleFilter = {
  * If `provider` is `custom`, pass `customHandler` and ignore other fields.
  */
 export type AiProviderConfig = {
+  /** Which provider implementation to use. */
   provider: 'openai' | 'anthropic' | 'ollama' | 'custom';
+
+  /** Provider API key (if required). */
   apiKey?: string;
+
+  /** Provider model identifier (e.g., "gpt-4o-mini"). */
   model?: string;
+
+  /** Base URL override for self-hosted / proxy setups. */
   baseUrl?: string;
+
+  /**
+   * Custom handler for advanced integrations.
+   *
+   * When `provider: "custom"`, the runtime should call this handler instead of
+   * using a built-in SDK / HTTP adapter.
+   */
   customHandler?: AiHandler;
+
+  /**
+   * Per-request timeout for provider calls in milliseconds.
+   *
+   * Defaults are defined by the provider layer (typically 30s).
+   */
+  timeoutMs?: number;
+
+  /**
+   * Requests-per-minute rate limit for the provider client.
+   *
+   * This is a client-side limiter to avoid accidental bursts; it does not
+   * replace provider-side limits.
+   */
+  rpm?: number;
+
+  /**
+   * Maximum number of attempts for a single AI call (including the first).
+   *
+   * Defaults are defined by the provider layer (typically 3).
+   */
+  maxRetries?: number;
+
+  /**
+   * Optional system prompt that is prepended to every provider call.
+   *
+   * This is useful to enforce a consistent JSON output format across requests.
+   */
+  systemPrompt?: string;
 };
 
 /**
@@ -72,11 +127,22 @@ export interface A11yAiConfig {
   timeout?: number;
 
   /** Optional viewport size for page rendering (in CSS pixels). */
-  viewport?: { width: number; height: number };
+  viewport?: ViewportSize;
 
   /**
    * Optional directory to write screenshots into (if the runner captures them).
    * Useful for debugging contrast and visual issues.
    */
   screenshotDir?: string;
+}
+
+/**
+ * Viewport dimensions for rendering a page during an audit.
+ */
+export interface ViewportSize {
+  /** Viewport width in CSS pixels. */
+  width: number;
+
+  /** Viewport height in CSS pixels. */
+  height: number;
 }

@@ -6,4 +6,5 @@
  */
 export * from './ai.js';
 export * from './config.js';
+export * from './provider.js';
 export * from './results.js';
