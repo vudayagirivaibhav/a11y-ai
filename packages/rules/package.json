@@ -1,0 +1,27 @@
+{
+  "name": "@a11y-ai/rules",
+  "version": "0.0.0",
+  "description": "AI-powered accessibility rules engine for a11y-ai.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "a11y-ai": "workspace:*"
+  }
+}
+
