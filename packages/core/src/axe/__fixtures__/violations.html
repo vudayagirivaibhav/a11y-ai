@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Axe Fixture</title>
+    <style>
+      /* Some environments may not evaluate contrast in jsdom; kept for realism. */
+      .low-contrast {
+        color: #777;
+        background-color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="img1" src="/missing-alt.png" />
+
+    <a id="link1" href="/empty"></a>
+
+    <p class="low-contrast">Low contrast text</p>
+
+    <form>
+      <input id="field1" type="text" />
+    </form>
+  </body>
+</html>
+

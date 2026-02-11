@@ -28,7 +28,10 @@ export interface AiResponse {
 
   /** Token accounting when the provider returns it. */
   usage?: {
+    /** Prompt/input tokens consumed. */
     promptTokens: number;
+
+    /** Completion/output tokens consumed. */
     completionTokens: number;
   };
 }

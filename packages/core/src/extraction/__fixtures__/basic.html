@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixture Page</title>
+    <meta name="description" content="A small fixture page for extraction tests." />
+    <style>
+      .low-contrast {
+        color: #777;
+        background-color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Main Title</h1>
+    <p>Intro text.</p>
+
+    <h2 class="low-contrast">Section A</h2>
+    <h3>Subsection A.1</h3>
+
+    <img id="logo" src="/logo.png" alt="Company logo" />
+    <img src="/missing-alt.png" />
+    <img src="/decorative.png" alt="" />
+
+    <a href="/docs">Documentation</a>
+    <a href="/cta">Click here</a>
+    <a href="/empty"></a>
+
+    <div role="button" aria-label="Open menu">Menu</div>
+
+    <form id="signup">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" />
+
+      <input id="unlabeled" name="unlabeled" type="text" />
+      <input id="aria" name="aria" type="text" aria-label="Search" />
+
+      <button type="submit">Submit</button>
+    </form>
+  </body>
+</html>
+

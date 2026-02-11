@@ -8,6 +8,7 @@ export default defineConfig({
   treeshake: true,
   sourcemap: true,
   splitting: false,
+  external: ['openai', '@anthropic-ai/sdk'],
   platform: 'node',
   target: 'es2022',
   outExtension({ format }) {
@@ -16,4 +17,3 @@ export default defineConfig({
     };
   },
 });
-

@@ -5,6 +5,9 @@
  * from `a11y-ai` without reaching into internal paths.
  */
 export * from './ai.js';
+export * from './axe.js';
 export * from './config.js';
+export * from './extraction.js';
 export * from './provider.js';
 export * from './results.js';
+export * from './violation.js';
