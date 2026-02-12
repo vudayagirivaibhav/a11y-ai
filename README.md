@@ -21,6 +21,7 @@ This repo is a `pnpm` workspace:
 1. Install dependencies:
    - `corepack enable`
    - `pnpm install`
+   - (avoid `npm install` — it won't work with `workspace:*` dependencies)
 2. Build:
    - `pnpm build` (runs `pnpm -r build`)
 

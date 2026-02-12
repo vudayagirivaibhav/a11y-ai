@@ -10,6 +10,7 @@
     "node": ">=18"
   },
   "scripts": {
+    "preinstall": "node scripts/ensure-pnpm.mjs",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"
