@@ -1,5 +1,5 @@
-import type { AIProvider, AIFinding, Severity } from 'a11y-ai';
-import type { ElementSnapshot } from 'a11y-ai';
+import type { AIProvider, AIFinding, Severity } from 'a11y-ai/types';
+import type { ElementSnapshot } from 'a11y-ai/types';
 
 import type { Rule, RuleContext, RuleResult, ViolationCategory } from './types.js';
 
@@ -132,4 +132,3 @@ function safeJsonParse(text: string): unknown {
     return null;
   }
 }
-

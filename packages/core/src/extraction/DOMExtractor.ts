@@ -148,7 +148,7 @@ export class DOMExtractor {
   }
 
   private async extractFromHtml(html: string): Promise<ExtractionResult> {
-    let JSDOM: (await import('jsdom'))['JSDOM'];
+    let JSDOM: typeof import('jsdom').JSDOM;
     try {
       ({ JSDOM } = await import('jsdom'));
     } catch (error) {

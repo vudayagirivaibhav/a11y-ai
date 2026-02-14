@@ -1,5 +1,5 @@
-import type { AIProvider, RuleContext as CoreRuleContext, Severity } from 'a11y-ai';
-import type { ElementSnapshot, ExtractionResult } from 'a11y-ai';
+import type { AIProvider, RuleContext as CoreRuleContext, Severity } from 'a11y-ai/types';
+import type { ElementSnapshot, ExtractionResult } from 'a11y-ai/types';
 
 /**
  * High-level categories for grouping rule results.
@@ -149,4 +149,3 @@ export interface RuleRunResult {
   /** Rule ids that failed and their errors. */
   errors: Array<{ ruleId: string; error: unknown }>;
 }
-

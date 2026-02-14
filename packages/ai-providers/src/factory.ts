@@ -1,4 +1,4 @@
-import type { AIProvider, AiProviderConfig } from 'a11y-ai';
+import type { AIProvider, AiProviderConfig } from 'a11y-ai/types';
 
 import { AnthropicProvider } from './providers/anthropic.js';
 import { MockAIProvider } from './providers/mock.js';
@@ -35,4 +35,3 @@ export function createAIProvider(config: AiProviderConfig): AIProvider {
       return new MockAIProvider(config);
   }
 }
-

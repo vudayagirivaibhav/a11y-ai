@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai';
+import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
 
 import { BaseRule } from './BaseRule.js';
 
@@ -92,4 +92,3 @@ const _context: RuleContext = {
   },
   config: {},
 };
-

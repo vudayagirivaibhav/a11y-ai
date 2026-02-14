@@ -1,4 +1,4 @@
-import type { ElementSnapshot } from 'a11y-ai';
+import type { ElementSnapshot } from 'a11y-ai/types';
 
 import { PROMPT_FRAGMENTS } from './fragments.js';
 import { estimateTokens, trimToTokens } from './token.js';
@@ -97,4 +97,3 @@ export class PromptBuilder {
     return `${text}\n\n# tokenEstimate: ${tokens}`;
   }
 }
-

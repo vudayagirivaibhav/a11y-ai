@@ -1,5 +1,5 @@
-import type { AIAnalysisResult, AIFinding, AIProvider, RuleContext, Severity } from 'a11y-ai';
-import type { AiProviderConfig } from 'a11y-ai';
+import type { AIAnalysisResult, AIFinding, AIProvider, RuleContext, Severity } from 'a11y-ai/types';
+import type { AiProviderConfig } from 'a11y-ai/types';
 
 import { AIProviderParseError, AIProviderTimeoutError } from './errors.js';
 import { TokenBucket } from './tokenBucket.js';

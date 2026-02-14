@@ -1,5 +1,5 @@
-import type { AIProvider } from 'a11y-ai';
-import type { ExtractionResult } from 'a11y-ai';
+import type { AIProvider } from 'a11y-ai/types';
+import type { ExtractionResult } from 'a11y-ai/types';
 
 import type { AuditConfig, Rule, RuleContext, RuleRunResult, RuleResult } from './types.js';
 
@@ -89,4 +89,3 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
     if (handle) clearTimeout(handle);
   }
 }
-

@@ -1,5 +1,6 @@
 import type { AiIssue } from './results.js';
 import type { AxeViolation, ViolationSeverity } from './axe.js';
+import type { RuleResult } from '@a11y-ai/rules';
 
 /**
  * Indicates where a merged violation came from.
@@ -10,6 +11,9 @@ export type ViolationSource = 'axe' | 'ai' | 'both';
  * Unified violation type used when combining axe-core and AI findings.
  */
 export interface Violation {
+  /** Category used for scoring and reporting. */
+  category?: string;
+
   /** Element selector for the violating node (best-effort). */
   selector: string;
 
@@ -33,5 +37,7 @@ export interface Violation {
 
   /** Underlying AI issue details (when applicable). */
   ai?: AiIssue;
-}
 
+  /** Underlying rule result details (when applicable). */
+  rule?: RuleResult;
+}

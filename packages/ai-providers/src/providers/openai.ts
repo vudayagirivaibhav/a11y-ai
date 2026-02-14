@@ -1,4 +1,4 @@
-import type { AiProviderConfig } from 'a11y-ai';
+import type { AiProviderConfig } from 'a11y-ai/types';
 
 import { BaseAIProvider } from '../base.js';
 import { AIProviderError } from '../errors.js';
@@ -51,4 +51,3 @@ export class OpenAIProvider extends BaseAIProvider {
     return content;
   }
 }
-

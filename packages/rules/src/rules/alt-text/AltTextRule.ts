@@ -1,5 +1,5 @@
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai';
-import type { ImageElement } from 'a11y-ai';
+import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
+import type { ImageElement } from 'a11y-ai/types';
 
 import { BaseRule } from '../../BaseRule.js';
 import type { RuleContext, RuleResult } from '../../types.js';
@@ -291,4 +291,3 @@ function safeJsonParse(text: string): unknown {
     return null;
   }
 }
-

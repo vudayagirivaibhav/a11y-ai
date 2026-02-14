@@ -53,7 +53,7 @@ export class AxeRunner {
 }
 
 async function runAxeInJSDOM(html: string, config: AxeRunConfig): Promise<AxeResults> {
-  let JSDOM: (await import('jsdom'))['JSDOM'];
+  let JSDOM: typeof import('jsdom').JSDOM;
   try {
     ({ JSDOM } = await import('jsdom'));
   } catch (error) {

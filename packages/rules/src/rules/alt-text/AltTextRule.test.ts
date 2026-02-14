@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai';
-import type { ExtractionResult, ImageElement } from 'a11y-ai';
+import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
+import type { ExtractionResult, ImageElement } from 'a11y-ai/types';
 
 import { AltTextRule } from './AltTextRule.js';
 
@@ -175,4 +175,3 @@ describe('AltTextRule', () => {
     expect(results.filter((r) => r.source === 'ai').length).toBe(12);
   });
 });
-

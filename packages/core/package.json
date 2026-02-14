@@ -13,6 +13,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.mjs",
+      "require": "./dist/types.cjs"
+    },
     "./cli": {
       "types": "./dist/cli.d.ts",
       "import": "./dist/cli.mjs",
@@ -29,6 +34,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@a11y-ai/ai-providers": "workspace:*",
+    "@a11y-ai/rules": "workspace:*",
     "axe-core": "^4.10.0"
   },
   "peerDependencies": {
