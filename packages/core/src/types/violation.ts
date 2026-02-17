@@ -1,6 +1,6 @@
 import type { AiIssue } from './results.js';
 import type { AxeViolation, ViolationSeverity } from './axe.js';
-import type { RuleResult } from '@a11y-ai/rules';
+import type { RuleResult } from '@a11y-ai/rules/types';
 
 /**
  * Indicates where a merged violation came from.
@@ -41,3 +41,8 @@ export interface Violation {
   /** Underlying rule result details (when applicable). */
   rule?: RuleResult;
 }
+
+/**
+ * Convenience alias for violations that include AI/rule sources.
+ */
+export type AIViolation = Violation & { source: 'ai' | 'both' };

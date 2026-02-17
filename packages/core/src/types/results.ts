@@ -54,7 +54,12 @@ export interface AiIssue {
 /**
  * Summary fields intended for quick reporting / badges / CI gating.
  */
-export type AuditSummary = {
+/**
+ * Legacy summary fields (from early scaffolding).
+ *
+ * Newer pipeline results use `AuditSummary` from `types/audit.ts`.
+ */
+export type LegacyAuditSummary = {
   /** Total number of issues across axe + AI (as defined by the runner). */
   totalIssues: number;
 
@@ -71,7 +76,12 @@ export type AuditSummary = {
 /**
  * Metadata about the run for debugging and reproducibility.
  */
-export type AuditMetadata = {
+/**
+ * Legacy metadata fields (from early scaffolding).
+ *
+ * Newer pipeline results use `AuditMetadata` from `types/audit.ts`.
+ */
+export type LegacyAuditMetadata = {
   /** Total audit duration in milliseconds. */
   duration: number;
 
@@ -107,8 +117,8 @@ export interface A11yAiResult {
   aiResults: AiIssue[];
 
   /** Quick summary for reporting / CI gating. */
-  summary: AuditSummary;
+  summary: LegacyAuditSummary;
 
   /** Metadata useful for debugging and reproducibility. */
-  metadata: AuditMetadata;
+  metadata: LegacyAuditMetadata;
 }

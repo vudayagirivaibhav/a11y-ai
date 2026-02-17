@@ -98,11 +98,26 @@ export interface LinkElement extends ElementSnapshot {
  * Snapshot for a single form field.
  */
 export interface FormFieldElement extends ElementSnapshot {
+  /** Field `id` attribute (if present). */
+  id: string | null;
+
   /** Field `name` attribute (if present). */
   name: string | null;
 
   /** Field `type` attribute (for inputs). */
   type: string | null;
+
+  /** Field placeholder text (if present). */
+  placeholder: string | null;
+
+  /** Field `title` attribute (if present). */
+  title: string | null;
+
+  /** Whether the field is marked required via `required` or `aria-required`. */
+  required: boolean;
+
+  /** Field `autocomplete` attribute value (if present). */
+  autocomplete: string | null;
 
   /** Referenced label text (best-effort). */
   labelText: string | null;

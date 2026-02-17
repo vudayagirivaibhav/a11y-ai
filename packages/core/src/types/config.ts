@@ -15,6 +15,11 @@ export const BUILTIN_AI_RULES = [
   'link-text-quality',
   'contrast-analysis',
   'form-label-relevance',
+  'heading-structure',
+  'aria-validation',
+  'keyboard-navigation',
+  'language-readability',
+  'media-accessibility',
 ] as const;
 
 /**
@@ -94,6 +99,14 @@ export type AiProviderConfig = {
    */
   systemPrompt?: string;
 };
+
+/**
+ * Alias for `AiProviderConfig`.
+ *
+ * The project uses `AI*` prefixes in some docs/examples; this keeps the public
+ * API ergonomic without forcing a rename.
+ */
+export type AIProviderConfig = AiProviderConfig;
 
 /**
  * Top-level configuration for running an audit.

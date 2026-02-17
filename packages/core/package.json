@@ -1,5 +1,5 @@
 {
-  "name": "a11y-ai",
+  "name": "@a11y-ai/core",
   "version": "0.0.0",
   "description": "AI-powered accessibility auditor built on axe-core + AI analysis.",
   "license": "MIT",
@@ -18,18 +18,21 @@
       "import": "./dist/types.mjs",
       "require": "./dist/types.cjs"
     },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "import": "./dist/cli.mjs",
-      "require": "./dist/cli.cjs"
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.mjs",
+      "require": "./dist/testing.cjs"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "import": "./dist/utils.mjs",
+      "require": "./dist/utils.cjs"
     }
   },
-  "bin": {
-    "a11y-ai": "./bin/a11y-ai.mjs"
-  },
-  "files": ["dist", "bin"],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup",
+    "lint": "eslint src",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

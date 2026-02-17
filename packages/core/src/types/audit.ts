@@ -1,6 +1,6 @@
 import type { AxeViolation, ViolationSeverity } from './axe.js';
 import type { ExtractionResult } from './extraction.js';
-import type { RuleResult } from '@a11y-ai/rules';
+import type { RuleResult } from '@a11y-ai/rules/types';
 import type { Violation } from './violation.js';
 
 /**

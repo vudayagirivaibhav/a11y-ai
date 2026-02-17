@@ -102,5 +102,16 @@ export interface AIAnalysisResult {
  */
 export interface AIProvider {
   analyze(prompt: string, context: RuleContext): Promise<AIAnalysisResult>;
-}
 
+  /**
+   * Optional vision-capable analysis method.
+   *
+   * Providers that support multimodal models can implement this to evaluate an
+   * image against a prompt (e.g., comparing an `<img>`'s alt text to its
+   * visual content).
+   *
+   * If a provider does not support vision, it should throw a
+   * `VisionNotSupportedError`.
+   */
+  analyzeImage?(imageData: Buffer | string, prompt: string, context: RuleContext): Promise<AIAnalysisResult>;
+}
