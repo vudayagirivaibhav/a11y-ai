@@ -20,6 +20,13 @@ export default [
     rules: {
       ...tsPlugin.configs.recommended.rules,
 
+      // TypeScript already performs undefined-variable checks.
+      // Keeping `no-undef` on for TS files causes false positives for DOM/Node globals.
+      'no-undef': 'off',
+
+      // Prefer the TypeScript-aware variant.
+      'no-unused-vars': 'off',
+
       'no-console': 'warn',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': [

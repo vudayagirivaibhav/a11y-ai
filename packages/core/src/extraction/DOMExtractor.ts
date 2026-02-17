@@ -17,6 +17,7 @@ import {
   sanitizeHtml,
   truncateContent,
 } from './utils.js';
+import { extractFromAutomationPage } from './fromPage.js';
 
 /**
  * Input source for DOM extraction.
@@ -63,7 +64,10 @@ export interface DOMExtractorOptions {
 }
 
 const DEFAULTS: Required<
-  Pick<DOMExtractorOptions, 'maxElementHtmlLength' | 'maxTextLength' | 'maxRawHtmlLength' | 'timeoutMs' | 'browser'>
+  Pick<
+    DOMExtractorOptions,
+    'maxElementHtmlLength' | 'maxTextLength' | 'maxRawHtmlLength' | 'timeoutMs' | 'browser'
+  >
 > = {
   maxElementHtmlLength: 2_000,
   maxTextLength: 500,
@@ -90,10 +94,17 @@ export class DOMExtractor {
    * Extract all supported snapshot collections and page metadata.
    */
   async extractAll(): Promise<ExtractionResult> {
-    if ('html' in this.input) {
-      return await this.extractFromHtml(this.input.html);
+    const html = (this.input as { html?: string }).html;
+    if (typeof html === 'string') {
+      return await this.extractFromHtml(html);
     }
-    return await this.extractFromUrl(this.input.url);
+
+    const url = (this.input as { url?: string }).url;
+    if (typeof url === 'string') {
+      return await this.extractFromUrl(url);
+    }
+
+    throw new Error('DOMExtractor requires either { html } or { url } input');
   }
 
   /**
@@ -162,13 +173,29 @@ export class DOMExtractor {
 
     const pageTitle = normalizeText(document.title ?? '');
     const pageLanguage = document.documentElement.getAttribute('lang');
-    const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') ?? null;
+    const metaDescription =
+      document.querySelector('meta[name="description"]')?.getAttribute('content') ?? null;
 
-    const images = this.extractImagesFromDocument(document, dom.window.getComputedStyle.bind(dom.window));
-    const links = this.extractLinksFromDocument(document, dom.window.getComputedStyle.bind(dom.window));
-    const forms = this.extractFormsFromDocument(document, dom.window.getComputedStyle.bind(dom.window));
-    const headings = this.extractHeadingsFromDocument(document, dom.window.getComputedStyle.bind(dom.window));
-    const ariaElements = this.extractAriaFromDocument(document, dom.window.getComputedStyle.bind(dom.window));
+    const images = this.extractImagesFromDocument(
+      document,
+      dom.window.getComputedStyle.bind(dom.window),
+    );
+    const links = this.extractLinksFromDocument(
+      document,
+      dom.window.getComputedStyle.bind(dom.window),
+    );
+    const forms = this.extractFormsFromDocument(
+      document,
+      dom.window.getComputedStyle.bind(dom.window),
+    );
+    const headings = this.extractHeadingsFromDocument(
+      document,
+      dom.window.getComputedStyle.bind(dom.window),
+    );
+    const ariaElements = this.extractAriaFromDocument(
+      document,
+      dom.window.getComputedStyle.bind(dom.window),
+    );
 
     const outline = buildDocumentOutline(headings);
 
@@ -221,16 +248,12 @@ export class DOMExtractor {
     const chromium = mod.chromium ?? mod.default?.chromium;
     if (!chromium) throw new Error('playwright chromium not available');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const browser = await chromium.launch();
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const page = await browser.newPage({ viewport: this.mergedOptions().viewport });
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await page.goto(url, { waitUntil: 'networkidle', timeout: this.mergedOptions().timeoutMs });
       return await this.extractFromLivePage(page, url);
     } finally {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await browser.close();
     }
   }
@@ -242,18 +265,13 @@ export class DOMExtractor {
     const puppeteer = mod.default ?? mod;
     if (!puppeteer?.launch) throw new Error('puppeteer not available');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const browser = await puppeteer.launch();
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const page = await browser.newPage();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await page.setViewport(this.mergedOptions().viewport);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await page.goto(url, { waitUntil: 'networkidle0', timeout: this.mergedOptions().timeoutMs });
       return await this.extractFromLivePage(page, url);
     } finally {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       await browser.close();
     }
   }
@@ -264,160 +282,13 @@ export class DOMExtractor {
     url: string,
   ): Promise<ExtractionResult> {
     const options = this.mergedOptions();
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
-    const data = await page.evaluate(
-      (maxElementHtmlLength: number, maxTextLength: number) => {
-        const cssEscape = (value: string) =>
-          value.replace(/[^a-zA-Z0-9_-]/g, (ch) => `\\${ch}`);
-
-        const buildSelector = (el: Element): string => {
-          const parts: string[] = [];
-          let current: Element | null = el;
-          while (current) {
-            const id = current.getAttribute?.('id');
-            if (id && id.trim()) {
-              parts.unshift(`#${cssEscape(id.trim())}`);
-              break;
-            }
-            const tag = current.tagName.toLowerCase();
-            const parent = current.parentElement;
-            if (!parent) {
-              parts.unshift(tag);
-              break;
-            }
-            const siblings = Array.from(parent.children).filter(
-              (s) => s.tagName.toLowerCase() === tag,
-            );
-            const index = siblings.indexOf(current);
-            const needsNth = siblings.length > 1 && index >= 0;
-            parts.unshift(needsNth ? `${tag}:nth-of-type(${index + 1})` : tag);
-            current = parent;
-          }
-          return parts.join(' > ');
-        };
-
-        const attrsToRecord = (el: Element) => {
-          const attrs: Record<string, string> = {};
-          for (const a of Array.from(el.attributes)) attrs[a.name] = a.value;
-          return attrs;
-        };
-
-        const normalizeText = (t: string) => t.replace(/\s+/g, ' ').trim();
-
-        const truncate = (t: string, max: number) =>
-          t.length <= max ? t : `${t.slice(0, Math.max(0, max - 1))}…`;
-
-        const styleSubset = (el: Element) => {
-          const s = getComputedStyle(el);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const bg = (s as any).backgroundColor ?? '';
-          return {
-            color: s.color ?? '',
-            backgroundColor: bg,
-            fontSize: s.fontSize ?? '',
-            display: s.display ?? '',
-            visibility: s.visibility ?? '',
-            opacity: s.opacity ?? '',
-          };
-        };
-
-        const boundingBox = (el: Element) => {
-          const rect = el.getBoundingClientRect();
-          return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-        };
-
-        const toSnapshot = (el: Element) => ({
-          selector: buildSelector(el),
-          html: truncate(el.outerHTML ?? '', maxElementHtmlLength),
-          tagName: el.tagName.toLowerCase(),
-          attributes: attrsToRecord(el),
-          textContent: truncate(normalizeText(el.textContent ?? ''), maxTextLength),
-          computedStyle: styleSubset(el),
-          boundingBox: boundingBox(el),
-        });
-
-        const images = Array.from(document.querySelectorAll('img')).map((el) => {
-          const snap = toSnapshot(el);
-          const alt = el.getAttribute('alt');
-          return {
-            ...snap,
-            src: el.getAttribute('src') ?? '',
-            alt,
-            hasAlt: el.hasAttribute('alt'),
-          };
-        });
-
-        const links = Array.from(document.querySelectorAll('a')).map((el) => ({
-          ...toSnapshot(el),
-          href: el.getAttribute('href'),
-        }));
-
-        const headings = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6')).map(toSnapshot);
-
-        const ariaElements = Array.from(document.querySelectorAll('*')).filter((el) => {
-          if (el.hasAttribute('role')) return true;
-          for (const attr of Array.from(el.attributes)) {
-            if (attr.name.startsWith('aria-')) return true;
-          }
-          return false;
-        }).map(toSnapshot);
-
-        const forms = Array.from(document.querySelectorAll('form')).map((form) => {
-          const fields = Array.from(
-            form.querySelectorAll('input,select,textarea'),
-          ).map((field) => {
-            const id = field.getAttribute('id');
-            const label = id ? document.querySelector(`label[for="${cssEscape(id)}"]`) : null;
-            return {
-              ...toSnapshot(field),
-              name: field.getAttribute('name'),
-              type: field.getAttribute('type'),
-              labelText: label ? normalizeText(label.textContent ?? '') : null,
-              ariaLabel: field.getAttribute('aria-label'),
-              ariaLabelledBy: field.getAttribute('aria-labelledby'),
-            };
-          });
-
-          return {
-            ...toSnapshot(form),
-            fields,
-          };
-        });
-
-        return {
-          pageTitle: normalizeText(document.title ?? ''),
-          pageLanguage: document.documentElement.getAttribute('lang'),
-          metaDescription:
-            document.querySelector('meta[name="description"]')?.getAttribute('content') ?? null,
-          images,
-          links,
-          forms,
-          headings,
-          ariaElements,
-          html: document.documentElement.outerHTML ?? '',
-        };
-      },
-      options.maxElementHtmlLength,
-      options.maxTextLength,
-    );
-
-    const outline = buildDocumentOutline(data.headings);
-    const rawHTML = truncateContent(sanitizeHtml(data.html), options.maxRawHtmlLength);
-
-    return {
+    return await extractFromAutomationPage({
+      page,
       url,
-      images: data.images,
-      links: data.links,
-      forms: data.forms,
-      headings: data.headings,
-      ariaElements: data.ariaElements,
-      pageTitle: data.pageTitle,
-      pageLanguage: data.pageLanguage,
-      metaDescription: data.metaDescription,
-      documentOutline: outline,
-      rawHTML,
-    };
+      maxElementHtmlLength: options.maxElementHtmlLength,
+      maxTextLength: options.maxTextLength,
+      maxRawHtmlLength: options.maxRawHtmlLength,
+    });
   }
 
   private elementSnapshotFromElement(
@@ -486,6 +357,8 @@ export class DOMExtractor {
   ): FormFieldElement {
     const snap = this.elementSnapshotFromElement(field, getComputedStyle);
     const id = field.getAttribute('id');
+    const ariaRequired = (field.getAttribute('aria-required') ?? '').toLowerCase() === 'true';
+    const required = ariaRequired || field.hasAttribute('required');
 
     const labelText =
       id && id.trim()
@@ -496,8 +369,13 @@ export class DOMExtractor {
 
     return {
       ...snap,
+      id,
       name: field.getAttribute('name'),
       type: field.getAttribute('type'),
+      placeholder: field.getAttribute('placeholder'),
+      title: field.getAttribute('title'),
+      required,
+      autocomplete: field.getAttribute('autocomplete'),
       labelText: hasLabelText ? labelText : null,
       ariaLabel: field.getAttribute('aria-label'),
       ariaLabelledBy: field.getAttribute('aria-labelledby'),

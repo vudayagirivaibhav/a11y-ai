@@ -33,20 +33,20 @@ export function buildSelector(element: Element): string {
     }
 
     const tag = current.tagName.toLowerCase();
-    const parent = current.parentElement;
-    if (!parent) {
+    const parentEl: Element | null = current.parentElement;
+    if (!parentEl) {
       parts.unshift(tag);
       break;
     }
 
-    const siblings = Array.from(parent.children).filter(
-      (el) => el.tagName.toLowerCase() === tag,
+    const siblings = (Array.from(parentEl.children) as Element[]).filter(
+      (el: Element) => el.tagName.toLowerCase() === tag,
     );
     const index = siblings.indexOf(current);
     const needsNth = siblings.length > 1 && index >= 0;
     parts.unshift(needsNth ? `${tag}:nth-of-type(${index + 1})` : tag);
 
-    current = parent;
+    current = parentEl;
   }
 
   return parts.join(' > ');
@@ -165,4 +165,3 @@ export function attributesToRecord(element: Element): Record<string, string> {
   }
   return attrs;
 }
-

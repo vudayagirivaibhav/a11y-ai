@@ -1,4 +1,4 @@
-import type { AxeResults } from 'axe-core';
+import type { AxeResults, ElementContext, RunOptions } from 'axe-core';
 
 import type { AxeRunConfig, AxeViolation } from '../types/axe.js';
 
@@ -30,19 +30,16 @@ export class AxeRunner {
   async runOnPage(page: any, config: AxeRunConfig = {}): Promise<AxeViolation[]> {
     const axe = await import('axe-core');
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
     await page.addScriptTag({ content: axe.source });
 
     const options = buildAxeRunOptions(config);
     const context = buildAxeRunContext(config);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
     const results = (await page.evaluate(
-      async ({ context, options }) => {
+      async ({ context, options }: { context: unknown; options: unknown }) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const w = window as any;
         if (!w.axe) throw new Error('axe not found on page');
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         return await w.axe.run(context ?? document, options);
       },
       { context, options },
@@ -64,8 +61,16 @@ async function runAxeInJSDOM(html: string, config: AxeRunConfig): Promise<AxeRes
   }
   const axe = await import('axe-core');
 
-  const dom = new JSDOM(html, { url: 'https://example.com' });
+  // `runScripts: "dangerously"` is required so we can inject/execute `axe.source`.
+  const dom = new JSDOM(html, { url: 'https://example.com', runScripts: 'dangerously' });
   const { window } = dom;
+
+  // axe-core may probe canvas APIs; jsdom throws unless `canvas` is installed.
+  // Stubbing prevents noisy "Not implemented" errors without impacting most rules.
+  if (window.HTMLCanvasElement?.prototype) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window.HTMLCanvasElement.prototype as any).getContext = (): null => null;
+  }
 
   // Inject axe into the jsdom window.
   window.eval(axe.source);
@@ -77,12 +82,11 @@ async function runAxeInJSDOM(html: string, config: AxeRunConfig): Promise<AxeRes
   const w = window as any;
   if (!w.axe) throw new Error('axe not initialized in jsdom');
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   return (await w.axe.run(context ?? window.document, options)) as AxeResults;
 }
 
-function buildAxeRunOptions(config: AxeRunConfig) {
-  const options: Record<string, unknown> = {};
+function buildAxeRunOptions(config: AxeRunConfig): RunOptions {
+  const options: RunOptions = {};
 
   if (config.standard) {
     options.runOnly = { type: 'tag', values: [config.standard] };
@@ -99,10 +103,12 @@ function buildAxeRunOptions(config: AxeRunConfig) {
   return options;
 }
 
-function buildAxeRunContext(config: AxeRunConfig) {
+function buildAxeRunContext(config: AxeRunConfig): ElementContext | null {
   const include = (config.include ?? []).filter(Boolean).map((s) => [s]);
   const exclude = (config.exclude ?? []).filter(Boolean).map((s) => [s]);
 
   if (include.length === 0 && exclude.length === 0) return null;
-  return { include: include.length ? include : undefined, exclude: exclude.length ? exclude : undefined };
+  if (include.length === 0) return { exclude };
+  if (exclude.length === 0) return { include };
+  return { include, exclude };
 }
