@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@a11y-ai/core": ["packages/core/src/index.ts"],
+      "@a11y-ai/core/types": ["packages/core/src/types-entry.ts"],
+      "@a11y-ai/core/testing": ["packages/core/src/testing/index.ts"],
+      "@a11y-ai/core/utils": ["packages/core/src/utils/index.ts"],
+      "@a11y-ai/ai-providers": ["packages/ai-providers/src/index.ts"],
+      "@a11y-ai/rules": ["packages/rules/src/index.ts"],
+      "@a11y-ai/rules/types": ["packages/rules/src/types-entry.ts"]
+    },
+    "types": ["node"]
+  }
+}
