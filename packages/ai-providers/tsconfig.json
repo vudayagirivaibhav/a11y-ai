@@ -1,19 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "baseUrl": ".",
-    "paths": {
-      "a11y-ai": ["../core/src/index.ts"]
-    },
-    "types": ["node"]
-  },
+  "extends": "../../tsconfig.base.json",
   "include": ["src", "tsup.config.ts"],
   "exclude": ["dist", "node_modules"]
 }

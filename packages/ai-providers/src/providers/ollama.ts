@@ -1,4 +1,4 @@
-import type { AiProviderConfig } from 'a11y-ai/types';
+import type { AiProviderConfig } from '@a11y-ai/core/types';
 
 import { BaseAIProvider } from '../base.js';
 import { AIProviderError } from '../errors.js';
@@ -9,11 +9,26 @@ type OllamaChatResponse = {
   eval_count?: number;
 };
 
+/**
+ * Ollama provider adapter.
+ *
+ * This performs HTTP calls against the local Ollama API and supports any model
+ * you have installed locally.
+ *
+ * Defaults:
+ * - `baseUrl`: `http://localhost:11434`
+ * - `model`: `llama3.1`
+ */
 export class OllamaProvider extends BaseAIProvider {
   constructor(config: AiProviderConfig) {
     super(config);
   }
 
+  /**
+   * Perform a single text completion request.
+   *
+   * The base class wraps this in retry/timeout/rate-limiting logic.
+   */
   protected async rawComplete(prompt: string, systemPrompt?: string): Promise<string> {
     const baseUrl = this.config.baseUrl ?? 'http://localhost:11434';
     const model = this.config.model ?? 'llama3.1';

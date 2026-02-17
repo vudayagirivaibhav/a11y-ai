@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AiProviderConfig, RuleContext } from 'a11y-ai';
+import type { AiProviderConfig, RuleContext } from '@a11y-ai/core/types';
 
 import { AIProviderTimeoutError } from './errors.js';
 import { MockAIProvider } from './providers/mock.js';

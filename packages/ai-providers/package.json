@@ -17,11 +17,12 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsup",
+    "lint": "eslint src",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "a11y-ai": "workspace:*"
+    "@a11y-ai/core": "workspace:*"
   },
   "peerDependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -36,4 +37,3 @@
     }
   }
 }
-

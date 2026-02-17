@@ -1,4 +1,4 @@
-import type { AiProviderConfig } from 'a11y-ai/types';
+import type { AiProviderConfig } from '@a11y-ai/core/types';
 
 import { BaseAIProvider } from '../base.js';
 
@@ -15,11 +15,21 @@ function pick<T>(arr: readonly T[], n: number): T {
   return arr[n % arr.length]!;
 }
 
+/**
+ * Deterministic mock provider.
+ *
+ * This is intended for unit/integration tests to avoid real network calls.
+ * The response is based on hashing the prompt so the same input yields the
+ * same output.
+ */
 export class MockAIProvider extends BaseAIProvider {
   constructor(config: AiProviderConfig) {
     super(config);
   }
 
+  /**
+   * Produce deterministic JSON output based on prompt hashing.
+   */
   protected async rawComplete(prompt: string): Promise<string> {
     const hash = fnv1a32(prompt);
 
@@ -43,5 +53,21 @@ export class MockAIProvider extends BaseAIProvider {
     }));
 
     return JSON.stringify({ findings });
+  }
+
+  /**
+   * Mock vision support.
+   *
+   * We don't attempt image understanding here; we just include a small marker in
+   * the prompt so tests can verify the vision code path is used.
+   */
+  override async analyzeImage(
+    imageData: Buffer | string,
+    prompt: string,
+    context: Parameters<BaseAIProvider['analyze']>[1],
+  ): Promise<import('@a11y-ai/core/types').AIAnalysisResult> {
+    const marker =
+      typeof imageData === 'string' ? `image:string:${imageData.length}` : `image:buffer:${imageData.byteLength}`;
+    return await this.analyze(`${prompt}\n\n[vision:${marker}]`, context);
   }
 }

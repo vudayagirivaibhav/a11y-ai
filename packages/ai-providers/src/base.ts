@@ -1,7 +1,14 @@
-import type { AIAnalysisResult, AIFinding, AIProvider, RuleContext, Severity } from 'a11y-ai/types';
-import type { AiProviderConfig } from 'a11y-ai/types';
+import type {
+  AIAnalysisResult,
+  AIFinding,
+  AIProvider,
+  RuleContext,
+  Severity,
+  AiProviderConfig,
+} from '@a11y-ai/core/types';
 
 import { AIProviderParseError, AIProviderTimeoutError } from './errors.js';
+import { VisionNotSupportedError } from './errors.js';
 import { TokenBucket } from './tokenBucket.js';
 
 type TokenUsage = AIAnalysisResult['usage'];
@@ -156,7 +163,12 @@ export abstract class BaseAIProvider implements AIProvider {
    */
   protected abstract rawComplete(prompt: string, systemPrompt?: string): Promise<string>;
 
-  async analyze(prompt: string, context: RuleContext): Promise<AIAnalysisResult> {
+  /**
+   * Shared retry/timeout/rate-limit wrapper.
+   *
+   * Concrete providers can reuse this for both text and vision calls.
+   */
+  protected async runWithRetries(request: () => Promise<string>, context: RuleContext): Promise<AIAnalysisResult> {
     const startedAt = Date.now();
 
     let attempts = 0;
@@ -171,10 +183,7 @@ export abstract class BaseAIProvider implements AIProvider {
           await this.limiter.take(1);
         }
 
-        const raw = await withTimeout(
-          this.rawComplete(prompt, this.config.systemPrompt),
-          this.timeoutMs,
-        );
+        const raw = await withTimeout(request(), this.timeoutMs);
         lastRaw = raw;
 
         const parsed = safeJsonParse(raw);
@@ -202,6 +211,20 @@ export abstract class BaseAIProvider implements AIProvider {
     }
 
     throw lastError instanceof Error ? lastError : new Error('AI provider request failed');
+  }
+
+  async analyze(prompt: string, context: RuleContext): Promise<AIAnalysisResult> {
+    return await this.runWithRetries(() => this.rawComplete(prompt, this.config.systemPrompt), context);
+  }
+
+  /**
+   * Optional vision API.
+   *
+   * Concrete providers can override this if they support multimodal inputs.
+   */
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async analyzeImage(_imageData: Buffer | string, _prompt: string, _context: RuleContext): Promise<AIAnalysisResult> {
+    throw new VisionNotSupportedError(this.config.provider);
   }
 
   /**
