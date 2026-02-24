@@ -17,18 +17,21 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
+    "lint": "eslint src",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "a11y-ai": "workspace:*"
+    "@a11y-ai/core": "workspace:*",
+    "@a11y-ai/rules": "workspace:*"
   },
   "optionalDependencies": {
     "commander": "^12.1.0",
     "ora": "^8.0.1"
   }
 }
-
