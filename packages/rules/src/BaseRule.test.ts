@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
+import type { AIAnalysisResult, AIProvider } from '@a11y-ai/core/types';
 
 import { BaseRule } from './BaseRule.js';
 

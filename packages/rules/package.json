@@ -12,16 +12,23 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types-entry.d.ts",
+      "import": "./dist/types-entry.mjs",
+      "require": "./dist/types-entry.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
+    "lint": "eslint src",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "a11y-ai": "workspace:*"
+    "@a11y-ai/core": "workspace:*"
   }
 }
-

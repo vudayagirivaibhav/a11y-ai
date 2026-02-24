@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
-import type { ExtractionResult } from 'a11y-ai/types';
+import type { AIAnalysisResult, AIProvider, ExtractionResult } from '@a11y-ai/core/types';
 
 import { RuleRegistry } from './RuleRegistry.js';
 import { runRules } from './aggregator.js';

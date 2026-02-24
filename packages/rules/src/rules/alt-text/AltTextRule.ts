@@ -1,5 +1,5 @@
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
-import type { ImageElement } from 'a11y-ai/types';
+import type { AIAnalysisResult, AIProvider, ImageElement } from '@a11y-ai/core/types';
+import { fetchImage } from '@a11y-ai/core/utils';
 
 import { BaseRule } from '../../BaseRule.js';
 import type { RuleContext, RuleResult } from '../../types.js';
@@ -19,6 +19,9 @@ export class AltTextRule extends BaseRule {
       description: 'Checks image alt text presence and quality.',
       severity: 'moderate',
       defaultBatchSize: 10,
+      requiresAI: true,
+      supportsVision: true,
+      estimatedCost: '1 request per ~10 images (+ vision when enabled)',
     });
   }
 
@@ -33,20 +36,160 @@ export class AltTextRule extends BaseRule {
     }
 
     // 2) AI checks for images that have non-empty alt text.
+    const settings = context.config.rules?.[this.id]?.settings as
+      | Record<string, unknown>
+      | undefined;
+    const aiEnabled = settings?.aiEnabled !== false;
+
     const aiCandidates = images.filter((img) => img.hasAlt && (img.alt ?? '').trim().length > 0);
-    if (aiCandidates.length === 0) return results;
+    const batchSize = context.config.rules?.[this.id]?.batchSize ?? this.defaultBatchSize;
 
-    const batchSize =
-      context.config.rules?.[this.id]?.batchSize ?? this.defaultBatchSize;
+    if (aiEnabled && aiCandidates.length > 0) {
+      const aiResults = await this.evaluateInBatches(aiCandidates, batchSize, async (batch) => {
+        const prompt = this.buildAltQualityPrompt(batch, context);
+        const analysis = await provider.analyze(prompt, context);
+        return this.parseAltQualityResponse(analysis, batch, context);
+      });
 
-    const aiResults = await this.evaluateInBatches(aiCandidates, batchSize, async (batch) => {
-      const prompt = this.buildAltQualityPrompt(batch, context);
-      const analysis = await provider.analyze(prompt, context);
-      return this.parseAltQualityResponse(analysis, batch, context);
-    });
+      results.push(...aiResults);
+    }
 
-    results.push(...aiResults);
+    // 3) Optional vision checks (expensive, opt-in).
+    await this.maybeRunVisionChecks(results, images, context, provider);
+
     return results;
+  }
+
+  private async maybeRunVisionChecks(
+    existingResults: RuleResult[],
+    images: ImageElement[],
+    context: RuleContext,
+    provider: AIProvider,
+  ): Promise<void> {
+    const ruleCfg = context.config.rules?.[this.id];
+    const visionEnabled = ruleCfg?.vision ?? context.config.vision ?? false;
+    if (!visionEnabled) return;
+
+    if (typeof provider.analyzeImage !== 'function') return;
+
+    const maxVisionImages = context.config.maxVisionImages ?? 20;
+
+    // Prioritize images already flagged by static/text checks.
+    const flaggedSelectors = new Set(
+      existingResults.filter((r) => r.ruleId === this.id).map((r) => r.element.selector),
+    );
+
+    const candidates = images.filter((img) => flaggedSelectors.has(img.selector));
+    const toAnalyze = candidates.slice(0, maxVisionImages);
+    if (toAnalyze.length === 0) return;
+
+    for (const img of toAnalyze) {
+      const fetched = await fetchImage(img.src, context.url);
+      if (!fetched) continue;
+
+      const dataUrl = `data:${fetched.mimeType};base64,${fetched.buffer.toString('base64')}`;
+      const prompt = this.buildVisionPrompt(img, context);
+
+      try {
+        const analysis = await provider.analyzeImage(dataUrl, prompt, context);
+        const visionResults = this.parseVisionResponse(analysis, img);
+        existingResults.push(...visionResults);
+      } catch {
+        // Graceful degradation: vision is optional and should not fail the audit.
+        continue;
+      }
+    }
+  }
+
+  private buildVisionPrompt(image: ImageElement, context: RuleContext): string {
+    const outputSchema = {
+      type: 'object',
+      properties: {
+        element: { type: 'string' },
+        imageDescription: { type: 'string' },
+        altTextAccuracy: {
+          type: 'string',
+          enum: ['accurate', 'partial', 'inaccurate', 'missing-context'],
+        },
+        suggestedAlt: { type: 'string' },
+        confidence: { type: 'number' },
+      },
+      required: ['element', 'imageDescription', 'altTextAccuracy', 'suggestedAlt', 'confidence'],
+    };
+
+    const instruction = [
+      'You will receive an image and its current alt text.',
+      '1) Describe what the image shows.',
+      '2) Evaluate whether the alt text accurately represents the image content and purpose in context.',
+      'Return ONLY valid JSON matching the output schema.',
+    ].join('\n');
+
+    const payload = {
+      element: image.selector,
+      currentAlt: image.alt ?? '',
+      pageTitle: context.extraction.pageTitle,
+      surrounding: {
+        // In later prompts we’ll provide richer neighborhood context; for now we keep it light.
+        metaDescription: context.extraction.metaDescription,
+      },
+    };
+
+    return [
+      'You are an accessibility auditor.',
+      '',
+      '# instruction',
+      instruction,
+      '',
+      '# context',
+      JSON.stringify(payload),
+      '',
+      '# outputSchema',
+      JSON.stringify(outputSchema),
+    ].join('\n');
+  }
+
+  private parseVisionResponse(analysis: AIAnalysisResult, image: ImageElement): RuleResult[] {
+    const parsed = safeJsonParse(extractJsonMaybe(analysis.raw));
+    if (!parsed || typeof parsed !== 'object') return [];
+
+    const obj = parsed as Record<string, unknown>;
+    const altTextAccuracy =
+      typeof obj.altTextAccuracy === 'string' ? obj.altTextAccuracy : 'accurate';
+    if (altTextAccuracy === 'accurate') return [];
+
+    const suggestedAlt = typeof obj.suggestedAlt === 'string' ? obj.suggestedAlt : '';
+    const imageDescription = typeof obj.imageDescription === 'string' ? obj.imageDescription : '';
+    const confidence = typeof obj.confidence === 'number' ? clamp01(obj.confidence) : 0.6;
+
+    const severity =
+      altTextAccuracy === 'inaccurate'
+        ? 'serious'
+        : altTextAccuracy === 'missing-context'
+          ? 'moderate'
+          : 'moderate';
+
+    return [
+      this.makeResult(image, {
+        severity,
+        source: 'ai',
+        message:
+          altTextAccuracy === 'inaccurate'
+            ? 'Alt text does not match the image content.'
+            : altTextAccuracy === 'partial'
+              ? 'Alt text only partially describes the image.'
+              : 'Alt text may be missing important context from the image.',
+        suggestion:
+          suggestedAlt || 'Revise the alt text to accurately describe the image and its purpose.',
+        confidence,
+        context: {
+          vision: true,
+          altTextAccuracy,
+          imageDescription,
+          latencyMs: analysis.latencyMs,
+          attempts: analysis.attempts,
+        },
+      }),
+    ];
   }
 
   private evaluateStatic(img: ImageElement): RuleResult[] {
@@ -155,7 +298,9 @@ export class AltTextRule extends BaseRule {
 
     const list = Array.isArray(parsed)
       ? parsed
-      : parsed && typeof parsed === 'object' && Array.isArray((parsed as { results?: unknown }).results)
+      : parsed &&
+          typeof parsed === 'object' &&
+          Array.isArray((parsed as { results?: unknown }).results)
         ? ((parsed as { results: unknown[] }).results as unknown[])
         : [];
 
@@ -177,9 +322,11 @@ export class AltTextRule extends BaseRule {
 
       const confidence = typeof obj.confidence === 'number' ? clamp01(obj.confidence) : 0.6;
 
-      const issues = Array.isArray(obj.issues) ? obj.issues.filter((x) => typeof x === 'string') : [];
+      const issues = Array.isArray(obj.issues)
+        ? obj.issues.filter((x) => typeof x === 'string')
+        : [];
       const suggestedAlt = typeof obj.suggestedAlt === 'string' ? obj.suggestedAlt : '';
-      const currentAlt = typeof obj.currentAlt === 'string' ? obj.currentAlt : img.alt ?? '';
+      const currentAlt = typeof obj.currentAlt === 'string' ? obj.currentAlt : (img.alt ?? '');
 
       out.push(
         this.makeResult(img, {
@@ -213,7 +360,9 @@ export class AltTextRule extends BaseRule {
 
   private makeResult(
     element: ImageElement,
-    options: Omit<RuleResult, 'ruleId' | 'category' | 'element'> & { context?: Record<string, unknown> },
+    options: Omit<RuleResult, 'ruleId' | 'category' | 'element'> & {
+      context?: Record<string, unknown>;
+    },
   ): RuleResult {
     return {
       ruleId: this.id,

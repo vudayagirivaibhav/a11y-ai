@@ -1,5 +1,5 @@
-import type { AIProvider, AIFinding, Severity } from 'a11y-ai/types';
-import type { ElementSnapshot } from 'a11y-ai/types';
+import type { AIFinding, AIProvider, Severity } from '@a11y-ai/core/types';
+import type { ElementSnapshot } from '@a11y-ai/core/types';
 
 import type { Rule, RuleContext, RuleResult, ViolationCategory } from './types.js';
 
@@ -24,6 +24,15 @@ export abstract class BaseRule implements Rule {
   /** Default severity for results. */
   readonly severity: Severity;
 
+  /** Whether this rule typically requires AI calls to be useful. */
+  readonly requiresAI: boolean;
+
+  /** Whether this rule supports vision-capable checks. */
+  readonly supportsVision: boolean;
+
+  /** Display hint for cost per run. */
+  readonly estimatedCost?: string;
+
   /** Default batch size for AI calls. */
   protected readonly defaultBatchSize: number;
 
@@ -33,12 +42,18 @@ export abstract class BaseRule implements Rule {
     description: string;
     severity?: Severity;
     defaultBatchSize?: number;
+    requiresAI?: boolean;
+    supportsVision?: boolean;
+    estimatedCost?: string;
   }) {
     this.id = options.id;
     this.category = options.category;
     this.description = options.description;
     this.severity = options.severity ?? 'moderate';
     this.defaultBatchSize = options.defaultBatchSize ?? 10;
+    this.requiresAI = options.requiresAI ?? false;
+    this.supportsVision = options.supportsVision ?? false;
+    this.estimatedCost = options.estimatedCost;
   }
 
   /**
@@ -86,14 +101,14 @@ export abstract class BaseRule implements Rule {
     const list = Array.isArray(parsed)
       ? parsed
       : parsed && typeof parsed === 'object'
-        ? (Array.isArray((parsed as { findings?: unknown }).findings) && (parsed as { findings: unknown[] }).findings) ||
-          (Array.isArray((parsed as { issues?: unknown }).issues) && (parsed as { issues: unknown[] }).issues) ||
+        ? (Array.isArray((parsed as { findings?: unknown }).findings) &&
+            (parsed as { findings: unknown[] }).findings) ||
+          (Array.isArray((parsed as { issues?: unknown }).issues) &&
+            (parsed as { issues: unknown[] }).issues) ||
           []
         : [];
 
-    return list
-      .filter((x) => x && typeof x === 'object')
-      .map((x) => x as AIFinding);
+    return list.filter((x) => x && typeof x === 'object').map((x) => x as AIFinding);
   }
 
   /**
@@ -109,7 +124,7 @@ export abstract class BaseRule implements Rule {
 
     for (let i = 0; i < items.length; i += size) {
       const batch = items.slice(i, i + size);
-      // eslint-disable-next-line no-await-in-loop
+
       const results = await fn(batch);
       out.push(...results);
     }

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AIAnalysisResult, AIProvider } from 'a11y-ai/types';
-import type { ExtractionResult, ImageElement } from 'a11y-ai/types';
+import type {
+  AIAnalysisResult,
+  AIProvider,
+  ExtractionResult,
+  ImageElement,
+} from '@a11y-ai/core/types';
 
 import { AltTextRule } from './AltTextRule.js';
 
@@ -23,7 +27,9 @@ function baseExtraction(images: ImageElement[]): ExtractionResult {
   };
 }
 
-function img(partial: Partial<ImageElement> & Pick<ImageElement, 'selector' | 'src'>): ImageElement {
+function img(
+  partial: Partial<ImageElement> & Pick<ImageElement, 'selector' | 'src'>,
+): ImageElement {
   return {
     selector: partial.selector,
     src: partial.src,
@@ -173,5 +179,80 @@ describe('AltTextRule', () => {
     const results = await rule.evaluate(ctx, provider);
     expect(provider.calls).toBe(2);
     expect(results.filter((r) => r.source === 'ai').length).toBe(12);
+  });
+
+  it('runs vision analysis when enabled and provider supports it', async () => {
+    const rule = new AltTextRule();
+    const dataUrl = 'data:image/png;base64,YQ=='; // 1 byte
+
+    const extraction = baseExtraction([
+      img({
+        selector: '#v1',
+        src: dataUrl,
+        alt: 'image.png', // triggers suspicious static finding => becomes a vision candidate
+        hasAlt: true,
+      }),
+    ]);
+
+    const provider: AIProvider = {
+      async analyze(): Promise<AIAnalysisResult> {
+        return { findings: [], raw: '{"results":[]}', latencyMs: 1, attempts: 1 };
+      },
+      async analyzeImage(): Promise<AIAnalysisResult> {
+        return {
+          findings: [],
+          raw: JSON.stringify({
+            element: '#v1',
+            imageDescription: 'A logo',
+            altTextAccuracy: 'inaccurate',
+            suggestedAlt: 'Company logo',
+            confidence: 0.9,
+          }),
+          latencyMs: 2,
+          attempts: 1,
+        };
+      },
+    };
+
+    const ctx: RuleContext = {
+      url: extraction.url ?? 'about:blank',
+      ruleId: rule.id as unknown as RuleContext['ruleId'],
+      extraction,
+      config: { vision: true, maxVisionImages: 5 },
+    };
+
+    const results = await rule.evaluate(ctx, provider);
+    expect(results.some((r) => r.context?.vision === true)).toBe(true);
+  });
+
+  it('does not fail when vision is enabled but provider does not support it', async () => {
+    const rule = new AltTextRule();
+    const dataUrl = 'data:image/png;base64,YQ==';
+
+    const extraction = baseExtraction([
+      img({
+        selector: '#v2',
+        src: dataUrl,
+        alt: 'image.png',
+        hasAlt: true,
+      }),
+    ]);
+
+    const provider: AIProvider = {
+      async analyze(): Promise<AIAnalysisResult> {
+        return { findings: [], raw: '{"results":[]}', latencyMs: 1, attempts: 1 };
+      },
+    };
+
+    const ctx: RuleContext = {
+      url: extraction.url ?? 'about:blank',
+      ruleId: rule.id as unknown as RuleContext['ruleId'],
+      extraction,
+      config: { vision: true },
+    };
+
+    const results = await rule.evaluate(ctx, provider);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((r) => r.context?.vision === true)).toBe(false);
   });
 });

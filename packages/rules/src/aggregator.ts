@@ -1,7 +1,6 @@
-import type { AIProvider } from 'a11y-ai/types';
-import type { ExtractionResult } from 'a11y-ai/types';
+import type { AIProvider, ExtractionResult } from '@a11y-ai/core/types';
 
-import type { AuditConfig, Rule, RuleContext, RuleRunResult, RuleResult } from './types.js';
+import type { AuditConfig, Rule, RuleContext, RuleResult, RuleRunResult } from './types.js';
 
 import { RuleRegistry } from './RuleRegistry.js';
 
@@ -55,7 +54,11 @@ export async function runRules(options: {
   return { results, errors };
 }
 
-function makeRuleContext(rule: Rule, extraction: ExtractionResult, config: AuditConfig): RuleContext {
+function makeRuleContext(
+  rule: Rule,
+  extraction: ExtractionResult,
+  config: AuditConfig,
+): RuleContext {
   return {
     url: extraction.url ?? 'about:blank',
     ruleId: rule.id as unknown as RuleContext['ruleId'],
@@ -72,7 +75,7 @@ async function workerLoop<T>(queue: T[], fn: (item: T) => Promise<void>): Promis
   while (true) {
     const next = queue.shift();
     if (!next) return;
-    // eslint-disable-next-line no-await-in-loop
+
     await fn(next);
   }
 }

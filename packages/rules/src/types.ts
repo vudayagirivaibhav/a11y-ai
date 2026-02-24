@@ -1,5 +1,5 @@
-import type { AIProvider, RuleContext as CoreRuleContext, Severity } from 'a11y-ai/types';
-import type { ElementSnapshot, ExtractionResult } from 'a11y-ai/types';
+import type { AIProvider, RuleContext as CoreRuleContext, Severity } from '@a11y-ai/core/types';
+import type { ElementSnapshot, ExtractionResult } from '@a11y-ai/core/types';
 
 /**
  * High-level categories for grouping rule results.
@@ -23,6 +23,20 @@ export type ViolationCategory =
  */
 export interface AuditConfig {
   /**
+   * Enable vision-capable checks when the selected provider supports them.
+   *
+   * Defaults to `false` to avoid unexpected costs.
+   */
+  vision?: boolean;
+
+  /**
+   * Maximum number of images to send to a vision model per audit.
+   *
+   * Vision calls can be expensive; this cap provides a predictable upper bound.
+   */
+  maxVisionImages?: number;
+
+  /**
    * Per-rule configuration map. Keys are rule ids.
    *
    * If a rule has `{ enabled: false }`, it will be skipped.
@@ -33,12 +47,18 @@ export interface AuditConfig {
       /** Whether this rule should run. Defaults to `true` when omitted. */
       enabled?: boolean;
 
+      /**
+       * Whether this rule should use vision (if available).
+       *
+       * If omitted, the rule falls back to the top-level `vision` flag.
+       */
+      vision?: boolean;
+
       /** Optional batch size override (for rules that support batching). */
       batchSize?: number;
 
       /** Optional rule-specific settings. */
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      settings?: Record<string, any>;
+      settings?: Record<string, unknown>;
     }
   >;
 
@@ -110,6 +130,27 @@ export interface Rule {
 
   /** Default severity used when a rule does not specify one per-result. */
   severity: Severity;
+
+  /**
+   * Whether this rule typically requires AI calls to be useful.
+   *
+   * Many rules also have a static "cheap" mode; this flag is used for metadata
+   * and presets (it is not a hard requirement).
+   */
+  requiresAI?: boolean;
+
+  /**
+   * Whether this rule can use vision-capable provider APIs.
+   */
+  supportsVision?: boolean;
+
+  /**
+   * Best-effort display hint for the expected cost per run.
+   *
+   * This is intentionally a string so providers can describe cost in their own
+   * terms (tokens, requests, etc).
+   */
+  estimatedCost?: string;
 
   /**
    * Evaluate the rule against a page context.

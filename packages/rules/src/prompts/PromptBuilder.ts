@@ -1,4 +1,4 @@
-import type { ElementSnapshot } from 'a11y-ai/types';
+import type { ElementSnapshot } from '@a11y-ai/core/types';
 
 import { PROMPT_FRAGMENTS } from './fragments.js';
 import { estimateTokens, trimToTokens } from './token.js';
