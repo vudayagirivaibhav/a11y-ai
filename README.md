@@ -67,20 +67,20 @@ Built-in rules cover:
 ## How it works (system design)
 
 ```mermaid
-flowchart LR
+graph LR
   U["User (CLI / API / CI)"] --> A["A11yAuditor (@a11y-ai/core)"]
 
   A --> X["DOMExtractor (jsdom / browser page)"]
-  A -->|parallel| AXE["AxeRunner (axe-core)"]
-  A -->|parallel| RULES["Rules Engine (@a11y-ai/rules)"]
+  A --> AXE["AxeRunner (axe-core)"]
+  A --> RULES["Rules Engine (@a11y-ai/rules)"]
 
   RULES --> REG["RuleRegistry + BaseRule"]
   REG --> PROMPT["PromptBuilder + token utilities"]
   RULES --> P["AIProvider (@a11y-ai/ai-providers)"]
 
   A --> MERGE["Merge + dedupe violations"]
-  MERGE --> SCORE["AccessibilityScorer (0–100)"]
-  SCORE --> REPORT["ReportGenerator (JSON/HTML/MD/SARIF/Console)"]
+  MERGE --> SCORE["AccessibilityScorer (0-100)"]
+  SCORE --> REPORT["ReportGenerator (JSON / HTML / MD / SARIF / Console)"]
 ```
 
 ### Audit pipeline (step-by-step)
@@ -98,12 +98,11 @@ sequenceDiagram
 
   CLI->>AUD: audit(target, config)
   AUD->>EXT: extract snapshots + metadata
-  par Static analysis
-    AUD->>AXE: run axe-core
-  and AI rules
-    AUD->>R: run enabled rules (parallel)
-    R->>AI: analyze(prompt, context)
-  end
+  AUD->>AXE: run axe-core (async)
+  AUD->>R: run enabled rules (async)
+  R->>AI: analyze(prompt, context)
+  AXE-->>AUD: axe violations
+  R-->>AUD: rule results
   AUD->>AUD: merge + dedupe
   AUD->>S: score()
   AUD->>REP: generate(format)
