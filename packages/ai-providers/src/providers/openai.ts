@@ -47,10 +47,8 @@ export class OpenAIProvider extends BaseAIProvider {
     const mod: any = await import('openai');
     const OpenAI = mod.default ?? mod.OpenAI ?? mod;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const client = new OpenAI({ apiKey, baseURL });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
     const response = await client.chat.completions.create({
       model,
       messages: [
@@ -96,14 +94,12 @@ export class OpenAIProvider extends BaseAIProvider {
     const mod: any = await import('openai');
     const OpenAI = mod.default ?? mod.OpenAI ?? mod;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const client = new OpenAI({ apiKey, baseURL });
 
     const imageUrl = toDataUrl(imageData);
     const systemPrompt = this.config.systemPrompt;
 
     return await this.runWithRetries(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
       const response = await client.chat.completions.create({
         model,
         messages: [

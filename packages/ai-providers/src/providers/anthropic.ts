@@ -68,10 +68,8 @@ export class AnthropicProvider extends BaseAIProvider {
     const mod: any = await import('@anthropic-ai/sdk');
     const Anthropic = mod.default ?? mod.Anthropic ?? mod;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const client = new Anthropic({ apiKey, baseURL });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
     const response = await client.messages.create({
       model,
       max_tokens: 1024,
@@ -115,13 +113,11 @@ export class AnthropicProvider extends BaseAIProvider {
     const mod: any = await import('@anthropic-ai/sdk');
     const Anthropic = mod.default ?? mod.Anthropic ?? mod;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const client = new Anthropic({ apiKey, baseURL });
 
     const { mediaType, base64 } = parseDataUrl(imageData);
 
     return await this.runWithRetries(async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-call
       const response = await client.messages.create({
         model,
         max_tokens: 1024,

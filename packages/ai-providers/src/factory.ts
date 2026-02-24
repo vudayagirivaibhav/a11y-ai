@@ -33,7 +33,7 @@ export function createAIProvider(config: AiProviderConfig): AIProvider {
          * The base orchestrator expects `AIAnalysisResult`; we keep this lightweight
          * and leave JSON parsing/normalization to the consumer if desired.
          */
-        async analyze(prompt, context) {
+        async analyze(prompt, _context) {
           const response = await config.customHandler!(prompt);
           return {
             findings: [],

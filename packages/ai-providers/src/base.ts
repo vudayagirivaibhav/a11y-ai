@@ -2,9 +2,9 @@ import type {
   AIAnalysisResult,
   AIFinding,
   AIProvider,
+  AiProviderConfig,
   RuleContext,
   Severity,
-  AiProviderConfig,
 } from '@a11y-ai/core/types';
 
 import { AIProviderParseError, AIProviderTimeoutError } from './errors.js';
@@ -62,13 +62,15 @@ function normalizeFindings(parsed: unknown, context: RuleContext): AIFinding[] {
     const obj = item as Record<string, unknown>;
 
     const ruleIdRaw = (obj.ruleId ?? obj.rule ?? context.ruleId) as unknown;
-    const ruleId = typeof ruleIdRaw === 'string' ? (ruleIdRaw as AIFinding['ruleId']) : context.ruleId;
+    const ruleId =
+      typeof ruleIdRaw === 'string' ? (ruleIdRaw as AIFinding['ruleId']) : context.ruleId;
 
     const severityRaw = obj.severity;
     const severity: Severity = isSeverity(severityRaw) ? severityRaw : 'moderate';
 
     const message = typeof obj.message === 'string' ? obj.message : 'Issue detected';
-    const suggestion = typeof obj.suggestion === 'string' ? obj.suggestion : 'Review and fix the issue.';
+    const suggestion =
+      typeof obj.suggestion === 'string' ? obj.suggestion : 'Review and fix the issue.';
 
     const confidence =
       typeof obj.confidence === 'number'
@@ -152,7 +154,8 @@ export abstract class BaseAIProvider implements AIProvider {
     this.maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES;
 
     const rpm = config.rpm;
-    this.limiter = typeof rpm === 'number' && Number.isFinite(rpm) && rpm > 0 ? new TokenBucket({ rpm }) : null;
+    this.limiter =
+      typeof rpm === 'number' && Number.isFinite(rpm) && rpm > 0 ? new TokenBucket({ rpm }) : null;
   }
 
   /**
@@ -168,7 +171,10 @@ export abstract class BaseAIProvider implements AIProvider {
    *
    * Concrete providers can reuse this for both text and vision calls.
    */
-  protected async runWithRetries(request: () => Promise<string>, context: RuleContext): Promise<AIAnalysisResult> {
+  protected async runWithRetries(
+    request: () => Promise<string>,
+    context: RuleContext,
+  ): Promise<AIAnalysisResult> {
     const startedAt = Date.now();
 
     let attempts = 0;
@@ -214,7 +220,10 @@ export abstract class BaseAIProvider implements AIProvider {
   }
 
   async analyze(prompt: string, context: RuleContext): Promise<AIAnalysisResult> {
-    return await this.runWithRetries(() => this.rawComplete(prompt, this.config.systemPrompt), context);
+    return await this.runWithRetries(
+      () => this.rawComplete(prompt, this.config.systemPrompt),
+      context,
+    );
   }
 
   /**
@@ -222,8 +231,12 @@ export abstract class BaseAIProvider implements AIProvider {
    *
    * Concrete providers can override this if they support multimodal inputs.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async analyzeImage(_imageData: Buffer | string, _prompt: string, _context: RuleContext): Promise<AIAnalysisResult> {
+
+  async analyzeImage(
+    _imageData: Buffer | string,
+    _prompt: string,
+    _context: RuleContext,
+  ): Promise<AIAnalysisResult> {
     throw new VisionNotSupportedError(this.config.provider);
   }
 
