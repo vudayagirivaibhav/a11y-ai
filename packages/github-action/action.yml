@@ -1,0 +1,75 @@
+name: 'a11y-ai Accessibility Audit'
+description: 'Run AI-powered accessibility audit on your site'
+inputs:
+  url:
+    description: 'URL to audit'
+    required: false
+  html-path:
+    description: 'Path to HTML file'
+    required: false
+  preset:
+    description: 'Audit preset'
+    default: 'standard'
+  threshold:
+    description: 'Minimum passing score'
+    default: '70'
+  provider:
+    description: 'AI provider'
+    default: 'openai'
+  api-key:
+    description: 'AI provider API key'
+    required: true
+  format:
+    description: 'Report format'
+    default: 'markdown'
+  fail-on-violations:
+    description: 'Fail if critical violations found'
+    default: 'true'
+outputs:
+  score:
+    description: 'Accessibility score 0-100'
+    value: ${{ steps.run.outputs.score }}
+  violations:
+    description: 'Number of violations found'
+    value: ${{ steps.run.outputs.violations }}
+  report-path:
+    description: 'Path to generated report'
+    value: ${{ steps.run.outputs.report-path }}
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - uses: pnpm/action-setup@v4
+    - name: Install
+      shell: bash
+      run: pnpm install --frozen-lockfile
+    - name: Build
+      shell: bash
+      run: pnpm build
+    - id: run
+      name: Audit
+      shell: bash
+      run: node packages/github-action/dist/index.mjs
+      env:
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_HTML_PATH: ${{ inputs.html-path }}
+        INPUT_PRESET: ${{ inputs.preset }}
+        INPUT_THRESHOLD: ${{ inputs.threshold }}
+        INPUT_PROVIDER: ${{ inputs.provider }}
+        INPUT_API_KEY: ${{ inputs.api-key }}
+        INPUT_FORMAT: ${{ inputs.format }}
+        INPUT_FAIL_ON_VIOLATIONS: ${{ inputs.fail-on-violations }}
+    - name: Upload HTML report
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: a11y-ai-report
+        path: ${{ steps.run.outputs.report-path }}
+    - name: Fail if below threshold
+      if: ${{ steps.run.outputs.passed != 'true' }}
+      shell: bash
+      run: |
+        echo "${{ steps.run.outputs.fail-reason }}"
+        exit 1
