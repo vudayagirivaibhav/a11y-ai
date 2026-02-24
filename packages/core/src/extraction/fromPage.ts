@@ -17,7 +17,10 @@ import { buildDocumentOutline, sanitizeHtml, truncateContent } from './utils.js'
  * We keep this intentionally tiny so we don't need a hard dependency on either SDK.
  */
 export interface BrowserAutomationPage {
-  evaluate<T>(pageFunction: (...args: unknown[]) => T | Promise<T>, ...args: unknown[]): Promise<T>;
+  evaluate<TResult, TArgs extends unknown[] = unknown[]>(
+    pageFunction: (...args: TArgs) => TResult | Promise<TResult>,
+    ...args: TArgs
+  ): Promise<TResult>;
 }
 
 type ExtractedPageData = {
@@ -47,7 +50,7 @@ export async function extractFromAutomationPage(options: {
 }): Promise<ExtractionResult> {
   const { page, url, maxElementHtmlLength, maxTextLength, maxRawHtmlLength } = options;
 
-  const data = await page.evaluate<ExtractedPageData>(
+  const data = await page.evaluate<ExtractedPageData, [number, number]>(
     (maxElementHtmlLengthIn: number, maxTextLengthIn: number): ExtractedPageData => {
       const cssEscape = (value: string): string =>
         value.replace(/[^a-zA-Z0-9_-]/g, (ch) => `\\${ch}`);

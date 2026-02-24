@@ -7,6 +7,7 @@
 export * from './ai.js';
 export * from './audit.js';
 export * from './axe.js';
+export * from './batch.js';
 export * from './cache.js';
 export * from './config.js';
 export * from './extraction.js';

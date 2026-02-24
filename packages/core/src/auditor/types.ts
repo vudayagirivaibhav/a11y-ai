@@ -19,6 +19,13 @@ export interface AuditConfig extends RulesEngineConfig {
   /** AI provider configuration used for AI rule evaluation. */
   aiProvider: AiProviderConfig;
 
+  /**
+   * Max number of pages to audit concurrently (used by `BatchAuditor`).
+   *
+   * This does not affect per-audit rule parallelism (see `parallelism`).
+   */
+  concurrency?: number;
+
   /** DOM extraction options. */
   extraction?: DOMExtractorOptions;
 
@@ -51,4 +58,3 @@ export type AuditorEvents =
   | { type: 'rule:start'; ruleId: string }
   | { type: 'rule:complete'; ruleId: string; resultCount: number }
   | { type: 'complete'; score: number; violationCount: number };
-

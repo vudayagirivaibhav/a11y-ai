@@ -7,6 +7,8 @@ import type { Violation } from '../types/violation.js';
 export interface Reporter {
   /** Format identifier (e.g., `json`, `html`, `md`, `sarif`, `console`). */
   format: string;
+
+  /** Produce a formatted report string for an `AuditResult`. */
   generate(result: AuditResult): string;
 }
 
@@ -92,7 +94,8 @@ export class ReportGenerator {
         lines.push(`- Selector: \`${v.selector}\``);
         lines.push(`- Source: \`${v.source}\``);
         if (v.suggestion) lines.push(`- Suggestion: ${v.suggestion}`);
-        if (typeof v.confidence === 'number') lines.push(`- Confidence: ${v.confidence.toFixed(2)}`);
+        if (typeof v.confidence === 'number')
+          lines.push(`- Confidence: ${v.confidence.toFixed(2)}`);
         if (includeHtml) {
           const html = v.axe?.html ?? v.rule?.element.html ?? '';
           if (html) {
@@ -299,7 +302,9 @@ export class ReportGenerator {
       result.summary.score >= 80 ? 'green' : result.summary.score >= 70 ? 'yellow' : 'red';
 
     const lines: string[] = [];
-    lines.push(`${color(scoreColor, `Score: ${result.summary.score} (${result.summary.grade})`)}  URL: ${result.url}`);
+    lines.push(
+      `${color(scoreColor, `Score: ${result.summary.score} (${result.summary.grade})`)}  URL: ${result.url}`,
+    );
     lines.push(`Violations: ${result.mergedViolations.length}`);
     lines.push(
       `By severity: critical=${result.summary.bySeverity.critical} serious=${result.summary.bySeverity.serious} moderate=${result.summary.bySeverity.moderate} minor=${result.summary.bySeverity.minor}`,
@@ -360,4 +365,3 @@ function colorize(color: ColorName, text: string): string {
 function noColorize(_color: ColorName, text: string): string {
   return text;
 }
-

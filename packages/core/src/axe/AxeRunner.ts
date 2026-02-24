@@ -85,8 +85,10 @@ async function runAxeInJSDOM(html: string, config: AxeRunConfig): Promise<AxeRes
   return (await w.axe.run(context ?? window.document, options)) as AxeResults;
 }
 
-function buildAxeRunOptions(config: AxeRunConfig): RunOptions {
-  const options: RunOptions = {};
+type AxeRunOptions = RunOptions & { timeout?: number };
+
+function buildAxeRunOptions(config: AxeRunConfig): AxeRunOptions {
+  const options: AxeRunOptions = {};
 
   if (config.standard) {
     options.runOnly = { type: 'tag', values: [config.standard] };
