@@ -1,0 +1,23 @@
+{
+  "name": "@a11y-ai/github-action",
+  "version": "0.0.0",
+  "description": "GitHub Action for running a11y-ai audits in CI.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist",
+    "action.yml"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@a11y-ai/core": "workspace:*"
+  }
+}
