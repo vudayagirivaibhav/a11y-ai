@@ -4,3 +4,9 @@ packages/*/dist
 coverage
 .env
 .turbo
+.next
+apps/*/.next
+*.tsbuildinfo
+.next
+apps/*/.next
+*.tsbuildinfo
