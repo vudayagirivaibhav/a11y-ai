@@ -412,3 +412,6 @@ Playground:
 ```bash
 pnpm -C apps/playground dev
 ```
+
+<img width="1121" height="887" alt="image" src="https://github.com/user-attachments/assets/250b1d40-f92b-40d2-b1f8-771307737c40" />
+
