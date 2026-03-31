@@ -25,11 +25,11 @@
 | C     | C2     | ✅ COMPLETED | Playground UI: Main Auditor Page           |
 | C     | C3     | ✅ COMPLETED | Playground UI: HTML Editor & Rule Explorer |
 | C     | C4     | ✅ COMPLETED | Playground Polish & Deployment             |
-| D     | D1     | ⏳ PENDING   | npm Publishing Pipeline                    |
+| D     | D1     | ✅ COMPLETED | npm Publishing Pipeline                    |
 | D     | D2     | ⏳ PENDING   | Complete GitHub Action & CI Pipeline       |
 | D     | D3     | ⏳ PENDING   | Documentation, CONTRIBUTING, & Launch      |
 
-**Overall Progress: 10/13 prompts completed (~77%)**
+**Overall Progress: 11/13 prompts completed (~85%)**
 
 ### Code Quality Improvements (Post Phase B)
 
@@ -54,6 +54,39 @@ Additional work completed to improve code quality and maintainability:
 
 **Build Status:** All packages build successfully
 **Test Status:** All 125 tests pass (33 test files)
+
+### Phase D1 Completion Notes
+
+**D1 — npm Publishing Pipeline:**
+
+- **Step 1: CLI Dependencies**
+  - Moved `commander` and `ora` from optionalDependencies to dependencies
+  - Removed lazy import pattern (`tryImportCommander`, `tryImportOra`)
+  - CLI now uses direct static imports for reliability
+
+- **Step 2: Package.json Updates**
+  - All packages updated to version `0.1.0`
+  - Added `publishConfig: { access: "public" }` for npm
+  - Added `repository`, `homepage`, `bugs` URLs
+  - Added `keywords` for npm discoverability
+  - Updated `files` array to include README.md
+  - Removed `private: true` from github-action
+
+- **Step 3: Package READMEs**
+  - `@a11y-ai/core`: API docs, presets, report formats, batch auditing
+  - `@a11y-ai/cli`: Commands, options, config file, examples
+  - `@a11y-ai/ai-providers`: Provider setup for OpenAI, Anthropic, Ollama
+  - `@a11y-ai/rules`: Rule list, custom rule creation, Zod schemas
+  - `@a11y-ai/github-action`: Usage examples, inputs/outputs, CI patterns
+
+- **Step 4: Changeset**
+  - Created `.changeset/v0-1-0.md` with full feature list for initial release
+
+- **Step 5: Release Workflow**
+  - Created `.github/workflows/release.yml`
+  - Uses `changesets/action` for automated version management
+  - Supports npm provenance for supply chain security
+  - Creates GitHub releases on successful publish
 
 ### Phase C Completion Notes
 
