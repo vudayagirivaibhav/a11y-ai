@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Preset = 'quick' | 'standard' | 'thorough';
 type InputMode = 'html' | 'url';
@@ -43,98 +43,156 @@ type PlaygroundResponse = {
   error?: string;
 };
 
-type SampleKey = 'marketing' | 'checkout' | 'blog';
+type StreamEvent = {
+  type: 'start' | 'axe:complete' | 'rule:start' | 'rule:complete' | 'complete' | 'error';
+  data: Record<string, unknown>;
+};
+
+type SampleKey = 'marketing' | 'checkout' | 'blog' | 'dashboard';
 
 const SAMPLE_HTML: Record<SampleKey, string> = {
-  marketing: `<!doctype html>
+  marketing: `<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Spring Launch Event</title>
-    <meta name="description" content="Reserve your seat for our spring launch event." />
-  </head>
-  <body>
-    <header>
-      <img src="/hero-team.jpg" alt="IMG_4821.JPG" width="980" height="420" />
-      <h1>Spring Launch Event</h1>
-      <p>Join our team for product demos, customer stories, and roadmap updates.</p>
-      <a href="/register">Click here</a>
-      <a href="/agenda">Read more</a>
-      <a href="/speakers">Read more</a>
-    </header>
+<head>
+  <meta charset="utf-8">
+  <title>Spring Launch Event</title>
+  <meta name="description" content="Reserve your seat for our spring launch event.">
+</head>
+<body>
+  <header>
+    <img src="/hero-team.jpg" alt="IMG_4821.JPG" width="980" height="420">
+    <h1>Spring Launch Event</h1>
+    <p>Join our team for product demos, customer stories, and roadmap updates.</p>
+    <a href="/register">Click here</a>
+    <a href="/agenda">Read more</a>
+    <a href="/speakers">Read more</a>
+  </header>
 
-    <main>
-      <section>
-        <h3>Why attend</h3>
-        <p>Learn about our newest features and upcoming improvements.</p>
-      </section>
-      <section>
-        <form>
-          <label>Email</label>
-          <input type="email" name="email" />
-          <button>Submit</button>
-        </form>
-      </section>
-    </main>
-  </body>
-</html>`,
-  checkout: `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Checkout</title>
-  </head>
-  <body>
-    <main>
-      <h1>Checkout</h1>
+  <main>
+    <section>
+      <h3>Why attend</h3>
+      <p>Learn about our newest features and upcoming improvements.</p>
+    </section>
+    <section>
       <form>
-        <label>Address</label>
-        <input id="address-line-1" name="address1" />
-
-        <label>Address</label>
-        <input id="address-line-2" name="address2" />
-
-        <input type="text" placeholder="ZIP code" />
-
-        <div onclick="submitForm()">Pay now</div>
+        <label>Email</label>
+        <input type="email" name="email">
+        <button>Submit</button>
       </form>
-
-      <a href="/help">here</a>
-    </main>
-  </body>
+    </section>
+  </main>
+</body>
 </html>`,
-  blog: `<!doctype html>
+  checkout: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Checkout</title>
+</head>
+<body>
+  <main>
+    <h1>Checkout</h1>
+    <form>
+      <label>Address</label>
+      <input id="address-line-1" name="address1">
+
+      <label>Address</label>
+      <input id="address-line-2" name="address2">
+
+      <input type="text" placeholder="ZIP code">
+
+      <div onclick="submitForm()" style="cursor:pointer; padding:10px; background:#007bff; color:white;">
+        Pay now
+      </div>
+    </form>
+
+    <a href="/help">here</a>
+  </main>
+</body>
+</html>`,
+  blog: `<!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Productivity tips for distributed teams</title>
-  </head>
-  <body>
-    <div style="background:url('/beach.jpg'); padding: 24px;">
-      <h1 style="color:#fff;">Remote Work Tips</h1>
+<head>
+  <meta charset="utf-8">
+  <title>Productivity tips for distributed teams</title>
+</head>
+<body>
+  <div style="background:url('/beach.jpg'); padding: 24px;">
+    <h1 style="color:#fff;">Remote Work Tips</h1>
+  </div>
+
+  <p>
+    This article delivers operational productivity enablement methodologies 
+    for cross-functional collaboration optimization in asynchronous environments.
+  </p>
+
+  <video autoplay>
+    <source src="/demo.mp4" type="video/mp4">
+  </video>
+</body>
+</html>`,
+  dashboard: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Analytics Dashboard</title>
+</head>
+<body>
+  <nav role="navigation">
+    <ul>
+      <li><a href="#"><img src="/icon-home.svg"></a></li>
+      <li><a href="#">Dashboard</a></li>
+      <li><a href="#">Reports</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <h1>Welcome back</h1>
+    
+    <div class="chart" role="img">
+      <!-- Chart rendered by JS -->
     </div>
 
-    <p>
-      This article delivers operational productivity enablement methodologies for cross-functional
-      collaboration optimization in asynchronous environments.
-    </p>
+    <table>
+      <tr><td>Revenue</td><td>$50,000</td></tr>
+      <tr><td>Users</td><td>1,234</td></tr>
+    </table>
 
-    <video autoplay>
-      <source src="/demo.mp4" type="video/mp4" />
-    </video>
-  </body>
+    <button onclick="exportData()">
+      <img src="/download.svg"> Export
+    </button>
+  </main>
+</body>
 </html>`,
 };
 
-const SAMPLE_DESCRIPTIONS: Record<SampleKey, string> = {
-  marketing: 'Landing page with weak alt text, vague links, and heading/form issues.',
-  checkout: 'Checkout form with ambiguous labels and keyboard accessibility problems.',
-  blog: 'Article page with contrast, readability, missing lang, and media issues.',
+const SAMPLE_META: Record<SampleKey, { title: string; description: string; icon: string }> = {
+  marketing: {
+    title: 'Marketing Page',
+    description: 'Weak alt text, vague links, heading hierarchy issues',
+    icon: '📢',
+  },
+  checkout: {
+    title: 'Checkout Form',
+    description: 'Ambiguous labels, keyboard traps, missing ARIA',
+    icon: '🛒',
+  },
+  blog: {
+    title: 'Blog Article',
+    description: 'Contrast issues, missing lang, media without captions',
+    icon: '📝',
+  },
+  dashboard: {
+    title: 'Dashboard',
+    description: 'Missing alt text, table headers, chart accessibility',
+    icon: '📊',
+  },
 };
 
 const EXAMPLE_URLS = [
-  { label: 'Example.com', url: 'https://example.com' },
-  { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Web_accessibility' },
+  { label: 'Example.com', url: 'https://example.com', icon: '🌐' },
+  { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Web_accessibility', icon: '📚' },
+  { label: 'MDN Web Docs', url: 'https://developer.mozilla.org', icon: '🔧' },
 ];
 
 function formatConfidence(value?: number): string {
@@ -148,6 +206,133 @@ function scoreTone(score: number): 'good' | 'warn' | 'bad' {
   return 'bad';
 }
 
+function getScoreColor(score: number): string {
+  if (score >= 90) return 'text-green-400';
+  if (score >= 70) return 'text-yellow-400';
+  if (score >= 50) return 'text-orange-400';
+  return 'text-red-400';
+}
+
+function AnimatedScore({ score, grade }: { score: number; grade: string }) {
+  const [displayScore, setDisplayScore] = useState(0);
+
+  useEffect(() => {
+    const duration = 1000;
+    const steps = 60;
+    const increment = score / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= score) {
+        setDisplayScore(score);
+        clearInterval(timer);
+      } else {
+        setDisplayScore(Math.round(current));
+      }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [score]);
+
+  return (
+    <div className="score-display">
+      <div className={`score-number ${getScoreColor(score)}`}>{displayScore}</div>
+      <div className="score-grade">{grade}</div>
+    </div>
+  );
+}
+
+function ProgressIndicator({ events, isComplete }: { events: StreamEvent[]; isComplete: boolean }) {
+  const stages = [
+    { key: 'start', label: 'Starting audit', icon: '🚀' },
+    { key: 'axe:complete', label: 'Static analysis', icon: '🔍' },
+    { key: 'rule:start', label: 'AI rules', icon: '🤖' },
+    { key: 'complete', label: 'Complete', icon: '✅' },
+  ];
+
+  const completedStages = new Set(events.map((e) => e.type));
+  const currentRules = events
+    .filter((e) => e.type === 'rule:start')
+    .map((e) => e.data.ruleId as string);
+
+  return (
+    <div className="progress-indicator">
+      <div className="progress-stages">
+        {stages.map((stage, i) => {
+          const isCompleted = completedStages.has(stage.key as StreamEvent['type']) || isComplete;
+          const isCurrent =
+            !isComplete &&
+            completedStages.has(stages[Math.max(0, i - 1)]?.key as StreamEvent['type']) &&
+            !completedStages.has(stage.key as StreamEvent['type']);
+
+          return (
+            <div
+              key={stage.key}
+              className={`progress-stage ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}`}
+            >
+              <span className="stage-icon">{stage.icon}</span>
+              <span className="stage-label">{stage.label}</span>
+              {isCurrent && <span className="stage-spinner" />}
+            </div>
+          );
+        })}
+      </div>
+      {currentRules.length > 0 && !isComplete && (
+        <div className="current-rule">
+          Running: <code>{currentRules[currentRules.length - 1]}</code>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LivePreview({ html }: { html: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (iframeRef.current) {
+      const doc = iframeRef.current.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(html);
+        doc.close();
+      }
+    }
+  }, [html]);
+
+  return (
+    <div className="live-preview">
+      <div className="preview-header">
+        <span className="preview-dot red" />
+        <span className="preview-dot yellow" />
+        <span className="preview-dot green" />
+        <span className="preview-title">Live Preview</span>
+      </div>
+      <iframe
+        ref={iframeRef}
+        title="Live HTML Preview"
+        sandbox="allow-same-origin"
+        className="preview-frame"
+      />
+    </div>
+  );
+}
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button type="button" onClick={handleCopy} className="copy-btn" title="Copy to clipboard">
+      {copied ? '✓' : '📋'} {label}
+    </button>
+  );
+}
+
 export function PlaygroundClient() {
   const [inputMode, setInputMode] = useState<InputMode>('html');
   const [html, setHtml] = useState<string>(SAMPLE_HTML.marketing);
@@ -157,11 +342,10 @@ export function PlaygroundClient() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlaygroundAuditResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect((): void => {
-    setIsHydrated(true);
-  }, []);
+  const [streamEvents, setStreamEvents] = useState<StreamEvent[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [activeTab, setActiveTab] = useState<'issues' | 'categories' | 'all'>('issues');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const mergedViolations = useMemo<PlaygroundViolation[]>(() => {
     if (!result || !Array.isArray(result.mergedViolations)) return [];
@@ -172,10 +356,7 @@ export function PlaygroundClient() {
   }, [result]);
 
   const groupedViolations = useMemo(() => {
-    if (mergedViolations.length === 0) {
-      return [] as Array<{ category: string; items: PlaygroundViolation[] }>;
-    }
-
+    if (mergedViolations.length === 0) return [];
     const map = new Map<string, PlaygroundViolation[]>();
     for (const item of mergedViolations) {
       const key = item.category ?? 'uncategorized';
@@ -183,394 +364,462 @@ export function PlaygroundClient() {
       list.push(item);
       map.set(key, list);
     }
-    return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
+    return Array.from(map.entries())
+      .map(([category, items]) => ({ category, items }))
+      .sort((a, b) => b.items.length - a.items.length);
   }, [mergedViolations]);
 
-  const topViolations = mergedViolations.slice(0, 8);
-  const score = result?.summary?.score ?? 0;
-  const severityCounts = {
-    critical: result?.summary?.bySeverity?.critical ?? 0,
-    serious: result?.summary?.bySeverity?.serious ?? 0,
-    moderate: result?.summary?.bySeverity?.moderate ?? 0,
-    minor: result?.summary?.bySeverity?.minor ?? 0,
-  } as const;
-  const categorySummaries = result?.summary?.categories ?? {};
-  const rulesExecutedCount = result?.metadata?.rulesExecuted?.length ?? 0;
-
-  async function runAudit(): Promise<void> {
+  const runAudit = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setStreamEvents([]);
+    setResult(null);
 
     try {
       const body = inputMode === 'url' ? { url, preset } : { html, preset };
-
       const response = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       });
 
-      const raw = await response.text();
-      let data: PlaygroundResponse;
-      try {
-        data = JSON.parse(raw) as PlaygroundResponse;
-      } catch {
-        setResult(null);
-        setError(`Unexpected API response (${response.status}).`);
-        return;
-      }
+      const data = (await response.json()) as PlaygroundResponse;
 
       if (!response.ok || !data.result) {
-        setResult(null);
         setError(data.error ?? `Request failed (${response.status})`);
         return;
       }
 
+      setStreamEvents([{ type: 'complete', data: {} }]);
       setResult(data.result);
-    } catch (requestError) {
-      setResult(null);
-      setError(requestError instanceof Error ? requestError.message : 'Network error');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Network error');
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [inputMode, url, html, preset]);
 
-  function loadSample(sample: SampleKey): void {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (!isLoading) runAudit();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoading, runAudit]);
+
+  const loadSample = (sample: SampleKey) => {
     setSelectedSample(sample);
     setHtml(SAMPLE_HTML[sample]);
     setError(null);
     setResult(null);
-  }
+  };
 
-  function loadExampleUrl(exampleUrl: string): void {
-    setUrl(exampleUrl);
-    setError(null);
-    setResult(null);
-  }
+  const score = result?.summary?.score ?? 0;
+  const severityCounts = {
+    critical: result?.summary?.bySeverity?.critical ?? 0,
+    serious: result?.summary?.bySeverity?.serious ?? 0,
+    moderate: result?.summary?.bySeverity?.moderate ?? 0,
+    minor: result?.summary?.bySeverity?.minor ?? 0,
+  };
 
   return (
-    <div className="playground-shell">
-      <section className="hero">
-        <div>
-          <p className="eyebrow">a11y-ai playground</p>
-          <h1>Test accessibility issues with AI-powered analysis</h1>
-          <p className="hero-copy">
-            Paste HTML or enter a URL, choose an audit preset, and inspect results: score, severity
-            breakdown, grouped issues, and actionable fixes.
+    <div className="playground-container">
+      {/* Hero Section */}
+      <section className="hero-section">
+        <div className="hero-content">
+          <div className="hero-badge">
+            <span className="badge-icon">✨</span>
+            <span>AI-Powered Accessibility Auditing</span>
+          </div>
+          <h1 className="hero-title">
+            Find accessibility issues
+            <br />
+            <span className="gradient-text">before your users do</span>
+          </h1>
+          <p className="hero-description">
+            Combines axe-core static analysis with AI semantic understanding. Catch issues that
+            traditional tools miss.
           </p>
+
           <div className="hero-actions">
-            <button className="primary" onClick={runAudit} disabled={isLoading} type="button">
-              {isLoading ? 'Running audit...' : 'Run audit'}
-            </button>
-            <select
-              className="preset-select"
-              value={preset}
-              onChange={(event) => setPreset(event.target.value as Preset)}
-              aria-label="Audit preset"
+            <button
+              className="btn-primary"
+              onClick={runAudit}
+              disabled={
+                isLoading || (inputMode === 'url' && !url) || (inputMode === 'html' && !html)
+              }
             >
-              <option value="quick">quick (static only)</option>
-              <option value="standard">standard (AI-enabled rules)</option>
-              <option value="thorough">thorough (vision enabled where supported)</option>
-            </select>
+              {isLoading ? (
+                <>
+                  <span className="btn-spinner" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <span>▶</span>
+                  Run Audit
+                </>
+              )}
+            </button>
+            <div className="preset-wrapper">
+              <select
+                value={preset}
+                onChange={(e) => setPreset(e.target.value as Preset)}
+                className="preset-select"
+              >
+                <option value="quick">⚡ Quick (Static only)</option>
+                <option value="standard">🤖 Standard (AI-enabled)</option>
+                <option value="thorough">🔬 Thorough (Vision AI)</option>
+              </select>
+            </div>
+            <span className="keyboard-hint">⌘+Enter</span>
           </div>
         </div>
-        <div className="hero-card">
-          <p className="hero-card-label">What this demo does</p>
-          <ul>
-            <li>Runs the real audit pipeline in `@a11y-ai/core`</li>
-            <li>Supports both HTML input and live URL auditing</li>
-            <li>Uses demo AI handler (no API key required for quick preset)</li>
-          </ul>
+
+        <div className="hero-stats">
+          <div className="stat-card">
+            <div className="stat-value">9</div>
+            <div className="stat-label">AI Rules</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">100+</div>
+            <div className="stat-label">axe-core checks</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">&lt;5s</div>
+            <div className="stat-label">Avg. audit time</div>
+          </div>
         </div>
       </section>
 
-      <section className="workspace-grid">
+      {/* Main Workspace */}
+      <section className="workspace">
+        {/* Input Panel */}
         <div className="panel input-panel">
           <div className="panel-header">
-            <div>
+            <div className="panel-title">
               <h2>Input</h2>
-              <p>Paste HTML or enter a URL to audit.</p>
+              <div className="mode-toggle">
+                <button
+                  className={`mode-btn ${inputMode === 'html' ? 'active' : ''}`}
+                  onClick={() => setInputMode('html')}
+                >
+                  📄 HTML
+                </button>
+                <button
+                  className={`mode-btn ${inputMode === 'url' ? 'active' : ''}`}
+                  onClick={() => setInputMode('url')}
+                >
+                  🔗 URL
+                </button>
+              </div>
             </div>
-            <div className={isHydrated ? 'client-status ready' : 'client-status'}>
-              {isHydrated ? 'JS ready' : 'Waiting for JS'}
-            </div>
-          </div>
-
-          <div className="input-mode-tabs">
-            <button
-              type="button"
-              className={`input-mode-tab ${inputMode === 'html' ? 'active' : ''}`}
-              onClick={() => setInputMode('html')}
-            >
-              HTML
-            </button>
-            <button
-              type="button"
-              className={`input-mode-tab ${inputMode === 'url' ? 'active' : ''}`}
-              onClick={() => setInputMode('url')}
-            >
-              URL
-            </button>
+            {inputMode === 'html' && (
+              <button
+                className="preview-toggle"
+                onClick={() => setShowPreview(!showPreview)}
+                title="Toggle live preview"
+              >
+                {showPreview ? '👁️ Hide Preview' : '👁️ Show Preview'}
+              </button>
+            )}
           </div>
 
           {inputMode === 'html' ? (
             <>
-              <div className="samples">
-                {(Object.keys(SAMPLE_HTML) as SampleKey[]).map((sample) => (
+              <div className="samples-grid">
+                {(Object.keys(SAMPLE_HTML) as SampleKey[]).map((key) => (
                   <button
-                    key={sample}
-                    className={sample === selectedSample ? 'sample-chip active' : 'sample-chip'}
-                    onClick={() => loadSample(sample)}
-                    type="button"
-                    title={SAMPLE_DESCRIPTIONS[sample]}
+                    key={key}
+                    className={`sample-card ${selectedSample === key ? 'active' : ''}`}
+                    onClick={() => loadSample(key)}
                   >
-                    {sample}
+                    <span className="sample-icon">{SAMPLE_META[key].icon}</span>
+                    <div className="sample-info">
+                      <span className="sample-title">{SAMPLE_META[key].title}</span>
+                      <span className="sample-desc">{SAMPLE_META[key].description}</span>
+                    </div>
                   </button>
                 ))}
               </div>
-              <p className="sample-description">{SAMPLE_DESCRIPTIONS[selectedSample]}</p>
 
-              <textarea
-                className="editor"
-                value={html}
-                onChange={(event) => setHtml(event.target.value)}
-                spellCheck={false}
-                aria-label="HTML input"
-              />
+              <div className={`editor-container ${showPreview ? 'with-preview' : ''}`}>
+                <div className="editor-wrapper">
+                  <div className="editor-header">
+                    <span className="editor-lang">HTML</span>
+                    <CopyButton text={html} label="Copy" />
+                  </div>
+                  <textarea
+                    ref={textareaRef}
+                    className="code-editor"
+                    value={html}
+                    onChange={(e) => setHtml(e.target.value)}
+                    spellCheck={false}
+                    placeholder="Paste your HTML here..."
+                  />
+                  <div className="editor-footer">
+                    <span>{html.length.toLocaleString()} characters</span>
+                    <span>{html.split('\n').length} lines</span>
+                  </div>
+                </div>
 
-              <div className="input-footer">
-                <span>{html.length.toLocaleString()} chars</span>
-                <span>Preset: {preset}</span>
+                {showPreview && <LivePreview html={html} />}
               </div>
             </>
           ) : (
-            <>
-              <div className="samples">
-                {EXAMPLE_URLS.map((example) => (
+            <div className="url-input-section">
+              <div className="url-samples">
+                {EXAMPLE_URLS.map((ex) => (
                   <button
-                    key={example.url}
-                    className={url === example.url ? 'sample-chip active' : 'sample-chip'}
-                    onClick={() => loadExampleUrl(example.url)}
-                    type="button"
+                    key={ex.url}
+                    className={`url-chip ${url === ex.url ? 'active' : ''}`}
+                    onClick={() => setUrl(ex.url)}
                   >
-                    {example.label}
+                    <span>{ex.icon}</span>
+                    <span>{ex.label}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="url-input-group">
+              <div className="url-input-wrapper">
+                <span className="url-icon">🔗</span>
                 <input
                   type="url"
-                  className="url-input"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com"
-                  aria-label="URL to audit"
+                  className="url-input"
                 />
+                {url && (
+                  <button className="url-clear" onClick={() => setUrl('')}>
+                    ✕
+                  </button>
+                )}
               </div>
 
-              <div className="input-footer" style={{ marginTop: '20px' }}>
-                <span>Mode: URL audit</span>
-                <span>Preset: {preset}</span>
-              </div>
-
-              <div className="empty-state" style={{ marginTop: '20px' }}>
-                <h3>URL Auditing</h3>
+              <div className="url-info">
                 <p>
-                  Enter a public URL to audit. The server will fetch the page and run the
-                  accessibility analysis. Private/internal URLs are blocked for security.
+                  <strong>Note:</strong> Only public URLs are supported. Private networks and
+                  localhost are blocked for security.
                 </p>
               </div>
-            </>
+            </div>
           )}
         </div>
 
+        {/* Results Panel */}
         <div className="panel results-panel">
           <div className="panel-header">
-            <div>
-              <h2>Audit results</h2>
-              <p>Visual summary of the current run.</p>
-            </div>
-            {result ? (
+            <h2>Results</h2>
+            {result && (
               <button
-                type="button"
-                className="secondary"
+                className="btn-secondary"
                 onClick={() => {
                   const blob = new Blob([JSON.stringify(result, null, 2)], {
                     type: 'application/json',
                   });
                   const downloadUrl = URL.createObjectURL(blob);
-                  const anchor = document.createElement('a');
-                  anchor.href = downloadUrl;
-                  anchor.download = 'a11y-ai-playground-report.json';
-                  anchor.click();
+                  const a = document.createElement('a');
+                  a.href = downloadUrl;
+                  a.download = 'a11y-audit-report.json';
+                  a.click();
                   URL.revokeObjectURL(downloadUrl);
                 }}
               >
-                Download JSON
+                📥 Export JSON
               </button>
-            ) : null}
+            )}
           </div>
 
-          {error ? <div className="error-banner">{error}</div> : null}
+          {isLoading && <ProgressIndicator events={streamEvents} isComplete={false} />}
 
-          {!result && !error ? (
+          {error && (
+            <div className="error-card">
+              <span className="error-icon">⚠️</span>
+              <div>
+                <strong>Audit Failed</strong>
+                <p>{error}</p>
+              </div>
+            </div>
+          )}
+
+          {!result && !error && !isLoading && (
             <div className="empty-state">
-              <h3>Run an audit to see a report</h3>
+              <div className="empty-illustration">
+                <svg viewBox="0 0 200 200" className="empty-svg">
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r="80"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    opacity="0.2"
+                  />
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r="60"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    opacity="0.3"
+                  />
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r="40"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    opacity="0.4"
+                  />
+                  <path
+                    d="M100 60 L100 100 L130 100"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <h3>Ready to audit</h3>
               <p>
-                Start with one of the samples or enter a URL, then inspect the score, grouped
-                violations, and suggestions.
+                Select a sample or paste your HTML, then click "Run Audit" to analyze accessibility.
               </p>
             </div>
-          ) : null}
+          )}
 
-          {result ? (
-            <>
-              <div className="score-grid">
-                <div className={`score-card tone-${scoreTone(score)}`}>
-                  <p className="muted-label">Accessibility score</p>
-                  <div className="score-row">
-                    <div className="score-number">{result.summary?.score ?? 0}</div>
-                    <div className="score-grade">{result.summary?.grade ?? '-'}</div>
-                  </div>
-                  <div className="progress-track" aria-hidden="true">
-                    <div
-                      className="progress-fill"
-                      style={{ width: `${result.summary?.score ?? 0}%` }}
-                    />
+          {result && (
+            <div className="results-content">
+              {/* Score Overview */}
+              <div className="score-overview">
+                <div className={`score-card-main tone-${scoreTone(score)}`}>
+                  <AnimatedScore score={score} grade={result.summary?.grade ?? '-'} />
+                  <div className="score-label">Accessibility Score</div>
+                  <div className="score-bar">
+                    <div className="score-bar-fill" style={{ width: `${score}%` }} />
                   </div>
                 </div>
 
-                <div className="metric-card">
-                  <p className="muted-label">Violations</p>
-                  <p className="metric-value">{mergedViolations.length}</p>
-                  <p className="metric-meta">Merged axe-core + rule findings</p>
-                </div>
-
-                <div className="metric-card">
-                  <p className="muted-label">AI calls</p>
-                  <p className="metric-value">{result.summary?.aiCalls ?? 0}</p>
-                  <p className="metric-meta">Preset-dependent; cached when enabled</p>
-                </div>
-
-                <div className="metric-card">
-                  <p className="muted-label">Duration</p>
-                  <p className="metric-value">{result.summary?.auditDurationMs ?? 0}ms</p>
-                  <p className="metric-meta">{rulesExecutedCount} rules executed</p>
+                <div className="metrics-grid">
+                  <div className="metric-card">
+                    <div className="metric-icon">🐛</div>
+                    <div className="metric-value">{mergedViolations.length}</div>
+                    <div className="metric-label">Issues Found</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-icon">🤖</div>
+                    <div className="metric-value">{result.summary?.aiCalls ?? 0}</div>
+                    <div className="metric-label">AI Calls</div>
+                  </div>
+                  <div className="metric-card">
+                    <div className="metric-icon">⚡</div>
+                    <div className="metric-value">{result.summary?.auditDurationMs ?? 0}ms</div>
+                    <div className="metric-label">Duration</div>
+                  </div>
                 </div>
               </div>
 
-              <div className="severity-panel">
-                <h3>Severity breakdown</h3>
-                <div className="severity-bars">
-                  {(['critical', 'serious', 'moderate', 'minor'] as const).map((level) => {
-                    const count = severityCounts[level];
-                    const max = Math.max(
-                      1,
-                      ...Object.values(severityCounts).map((value) => Number(value)),
-                    );
-                    const width = (count / max) * 100;
-                    return (
-                      <div key={level} className="severity-row">
-                        <span className={`severity-pill ${level}`}>{level}</span>
-                        <div className="severity-track">
-                          <div className="severity-fill" style={{ width: `${width}%` }} />
+              {/* Severity Breakdown */}
+              <div className="severity-section">
+                <h3>Severity Breakdown</h3>
+                <div className="severity-grid">
+                  {(['critical', 'serious', 'moderate', 'minor'] as const).map((level) => (
+                    <div key={level} className={`severity-card severity-${level}`}>
+                      <div className="severity-count">{severityCounts[level]}</div>
+                      <div className="severity-label">{level}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Results Tabs */}
+              <div className="results-tabs">
+                <button
+                  className={`tab-btn ${activeTab === 'issues' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('issues')}
+                >
+                  Top Issues ({Math.min(mergedViolations.length, 10)})
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'categories' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('categories')}
+                >
+                  By Category ({groupedViolations.length})
+                </button>
+                <button
+                  className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('all')}
+                >
+                  All Issues ({mergedViolations.length})
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              <div className="tab-content">
+                {activeTab === 'issues' && (
+                  <div className="issues-list">
+                    {mergedViolations.slice(0, 10).map((v, i) => (
+                      <div key={i} className="issue-card">
+                        <div className="issue-header">
+                          <span className={`severity-badge ${v.severity}`}>{v.severity}</span>
+                          <span className="issue-source">{v.source}</span>
                         </div>
-                        <strong>{count}</strong>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="split-panels">
-                <section className="sub-panel">
-                  <h3>Top issues</h3>
-                  <div className="issue-list">
-                    {topViolations.length === 0 ? (
-                      <p className="muted-note">No violations found in this run.</p>
-                    ) : (
-                      topViolations.map((violation, index) => (
-                        <article key={`${violation.selector}-${index}`} className="issue-item">
-                          <div className="issue-head">
-                            <span className={`severity-pill ${violation.severity}`}>
-                              {violation.severity}
-                            </span>
-                            <span className="issue-source">{violation.source}</span>
-                          </div>
-                          <p className="issue-message">{violation.message}</p>
-                          <p className="issue-meta">
-                            <code>{violation.selector}</code>
-                          </p>
-                          {violation.suggestion ? (
-                            <p className="issue-suggestion">{violation.suggestion}</p>
-                          ) : null}
-                          <div className="issue-foot">
-                            <span>{violation.category ?? 'uncategorized'}</span>
-                            <span>confidence: {formatConfidence(violation.confidence)}</span>
-                          </div>
-                        </article>
-                      ))
-                    )}
-                  </div>
-                </section>
-
-                <section className="sub-panel">
-                  <h3>Categories</h3>
-                  <div className="category-list">
-                    {Object.entries(categorySummaries).map(([category, summary]) => (
-                      <article key={category} className="category-item">
-                        <div className="category-header">
-                          <h4>{category}</h4>
-                          <span>
-                            {summary.score ?? 0} ({summary.grade ?? '-'})
+                        <p className="issue-message">{v.message}</p>
+                        <code className="issue-selector">{v.selector}</code>
+                        {v.suggestion && <p className="issue-suggestion">💡 {v.suggestion}</p>}
+                        <div className="issue-footer">
+                          <span className="issue-category">{v.category}</span>
+                          <span className="issue-confidence">
+                            Confidence: {formatConfidence(v.confidence)}
                           </span>
                         </div>
-                        <div className="progress-track small" aria-hidden="true">
-                          <div
-                            className="progress-fill"
-                            style={{ width: `${summary.score ?? 0}%` }}
-                          />
-                        </div>
-                        <p className="category-meta">{summary.violationCount ?? 0} violations</p>
-                        <p className="category-top-issue">
-                          {summary.topIssue ?? 'No issues summary available.'}
-                        </p>
-                      </article>
+                      </div>
                     ))}
                   </div>
-                </section>
-              </div>
+                )}
 
-              <div className="grouped-results">
-                <h3>Grouped violations</h3>
-                {groupedViolations.map((group) => (
-                  <details key={group.category} className="group-card" open>
-                    <summary>
-                      <span>{group.category}</span>
-                      <span>{group.items.length} issues</span>
-                    </summary>
-                    <div className="group-card-body">
-                      {group.items.map((item, index) => (
-                        <div key={`${item.selector}-${index}`} className="group-row">
-                          <div className="group-row-main">
-                            <span className={`severity-pill ${item.severity}`}>
-                              {item.severity}
-                            </span>
-                            <p>{item.message}</p>
-                          </div>
-                          <code>{item.selector}</code>
-                          {item.suggestion ? (
-                            <p className="group-suggestion">{item.suggestion}</p>
-                          ) : null}
+                {activeTab === 'categories' && (
+                  <div className="categories-list">
+                    {groupedViolations.map((group) => (
+                      <details key={group.category} className="category-card" open>
+                        <summary>
+                          <span className="category-name">{group.category}</span>
+                          <span className="category-count">{group.items.length} issues</span>
+                        </summary>
+                        <div className="category-issues">
+                          {group.items.map((item, i) => (
+                            <div key={i} className="mini-issue">
+                              <span className={`severity-dot ${item.severity}`} />
+                              <span className="mini-message">{item.message}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </details>
-                ))}
+                      </details>
+                    ))}
+                  </div>
+                )}
+
+                {activeTab === 'all' && (
+                  <div className="all-issues">
+                    {mergedViolations.map((v, i) => (
+                      <div key={i} className="compact-issue">
+                        <span className={`severity-badge small ${v.severity}`}>
+                          {v.severity.charAt(0).toUpperCase()}
+                        </span>
+                        <span className="compact-message">{v.message}</span>
+                        <code className="compact-selector">{v.selector}</code>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </>
-          ) : null}
+            </div>
+          )}
         </div>
       </section>
     </div>
