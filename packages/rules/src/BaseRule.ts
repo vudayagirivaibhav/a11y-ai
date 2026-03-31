@@ -1,5 +1,6 @@
 import type { AIFinding, AIProvider, Severity } from '@a11y-ai/core/types';
 import type { ElementSnapshot } from '@a11y-ai/core/types';
+import type { ZodTypeAny } from 'zod';
 
 import type { Rule, RuleContext, RuleResult, ViolationCategory } from './types.js';
 
@@ -110,6 +111,26 @@ export abstract class BaseRule implements Rule {
         : [];
 
     return list.filter((x) => x && typeof x === 'object').map((x) => x as AIFinding);
+  }
+
+  /**
+   * Parse AI response text into a typed result using a Zod schema.
+   *
+   * When parsing fails, returns null for graceful degradation.
+   */
+  protected parseAIResponseWithSchema<T extends ZodTypeAny>(
+    raw: string,
+    schema: T,
+  ): ReturnType<T['safeParse']>['data'] | null {
+    const text = extractJsonMaybe(raw);
+    const parsed = safeJsonParse(text);
+    if (!parsed) return null;
+
+    const result = schema.safeParse(parsed);
+    if (!result.success) {
+      return null;
+    }
+    return result.data;
   }
 
   /**

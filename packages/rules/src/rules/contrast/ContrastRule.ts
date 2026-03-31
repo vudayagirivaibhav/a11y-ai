@@ -1,7 +1,8 @@
 import type { AIProvider, ElementSnapshot } from '@a11y-ai/core/types';
-import { calculateContrastRatio, parseColor } from '@a11y-ai/core/utils';
+import { type RGBA, calculateContrastRatio, parseColor } from '@a11y-ai/core/utils';
 
 import { BaseRule } from '../../BaseRule.js';
+import { ContrastAIResponseSchema } from '../../schemas.js';
 import type { RuleContext, RuleResult } from '../../types.js';
 
 function parsePx(value: string): number | null {
@@ -21,9 +22,20 @@ function isEffectivelyVisible(el: ElementSnapshot): boolean {
   return true;
 }
 
-function contrastRequirement(fontSizePx: number, standard: 'AA' | 'AAA'): number {
-  // Large text: >=18px regular (we don't currently detect bold reliably).
-  const isLarge = fontSizePx >= 18;
+function isBold(fontWeight: string | undefined): boolean {
+  if (!fontWeight) return false;
+  const weight = Number(fontWeight);
+  if (Number.isFinite(weight)) return weight >= 700;
+  return fontWeight === 'bold' || fontWeight === 'bolder';
+}
+
+function contrastRequirement(
+  fontSizePx: number,
+  fontWeight: string | undefined,
+  standard: 'AA' | 'AAA',
+): number {
+  const bold = isBold(fontWeight);
+  const isLarge = fontSizePx >= 18 || (bold && fontSizePx >= 14);
   if (standard === 'AAA') return isLarge ? 4.5 : 7;
   return isLarge ? 3 : 4.5;
 }
@@ -40,29 +52,29 @@ function suggestTextColor(bg: { r: number; g: number; b: number }): string {
 }
 
 /**
- * Contrast rule (computed style based).
+ * Contrast rule with static checks and AI analysis for complex backgrounds.
  *
- * This is a best-effort check based on extracted computed styles. For complex
- * backgrounds (gradients, images, transparency), we surface a "manual review"
- * finding instead of guessing.
+ * Static checks compute contrast from extracted computed styles.
+ * AI analysis handles gradients, images, and transparency.
  */
 export class ContrastRule extends BaseRule {
   constructor() {
     super({
       id: 'ai/contrast-analysis',
       category: 'contrast',
-      description: 'Checks text color contrast against computed background colors (best-effort).',
+      description: 'Checks text color contrast against computed background colors.',
       severity: 'moderate',
-      requiresAI: false,
-      estimatedCost: '0 (static)',
+      requiresAI: true,
+      estimatedCost: '1 request per batch of complex elements',
     });
   }
 
-  async evaluate(context: RuleContext, _provider: AIProvider): Promise<RuleResult[]> {
+  async evaluate(context: RuleContext, provider: AIProvider): Promise<RuleResult[]> {
     const settings = context.config.rules?.[this.id]?.settings as
       | Record<string, unknown>
       | undefined;
     const standard = String(settings?.standard ?? 'AA').toUpperCase() === 'AAA' ? 'AAA' : 'AA';
+    const aiEnabled = settings?.aiEnabled !== false;
 
     const candidates: ElementSnapshot[] = [
       ...context.extraction.headings,
@@ -71,6 +83,7 @@ export class ContrastRule extends BaseRule {
     ].filter((e) => e.textContent.trim().length > 0);
 
     const out: RuleResult[] = [];
+    const complexElements: ElementSnapshot[] = [];
 
     for (const el of candidates) {
       if (!isEffectivelyVisible(el)) continue;
@@ -97,26 +110,41 @@ export class ContrastRule extends BaseRule {
       }
 
       if (bg.a === 0) {
-        out.push(
-          this.makeResult(el, {
-            severity: 'minor',
-            source: 'static',
-            message:
-              'Background color is transparent; contrast may depend on parent/background images.',
-            suggestion:
-              'Manually verify contrast where transparency or background images are used.',
-            confidence: 0.45,
-            context: {
-              color: el.computedStyle.color,
-              backgroundColor: el.computedStyle.backgroundColor,
-            },
-          }),
-        );
+        const resolvedBg = this.resolveParentBackground(el, context);
+        if (resolvedBg) {
+          const fontSizePx = parsePx(el.computedStyle.fontSize) ?? 16;
+          const fontWeight = el.computedStyle.fontWeight;
+          const required = contrastRequirement(fontSizePx, fontWeight, standard);
+          const ratio = calculateContrastRatio(fg, resolvedBg);
+
+          if (ratio < required) {
+            out.push(
+              this.makeResult(el, {
+                severity: ratio < required / 2 ? 'serious' : 'moderate',
+                source: 'static',
+                message: `Text contrast is too low (${ratio.toFixed(2)}:1 against resolved parent background, requires ≥ ${required}:1).`,
+                suggestion: `Adjust the text or background color to meet WCAG ${standard}.`,
+                confidence: 0.65,
+                context: {
+                  ratio,
+                  required,
+                  resolvedFromParent: true,
+                  color: el.computedStyle.color,
+                  backgroundColor: el.computedStyle.backgroundColor,
+                },
+              }),
+            );
+          }
+          continue;
+        }
+
+        complexElements.push(el);
         continue;
       }
 
       const fontSizePx = parsePx(el.computedStyle.fontSize) ?? 16;
-      const required = contrastRequirement(fontSizePx, standard);
+      const fontWeight = el.computedStyle.fontWeight;
+      const required = contrastRequirement(fontSizePx, fontWeight, standard);
       const ratio = calculateContrastRatio(fg, bg);
 
       if (ratio >= required) continue;
@@ -138,11 +166,156 @@ export class ContrastRule extends BaseRule {
             color: el.computedStyle.color,
             backgroundColor: el.computedStyle.backgroundColor,
             fontSize: el.computedStyle.fontSize,
+            fontWeight: el.computedStyle.fontWeight,
           },
         }),
       );
     }
 
+    if (aiEnabled && complexElements.length > 0) {
+      const aiResults = await this.runAIAnalysis(complexElements, context, provider, standard);
+      out.push(...aiResults);
+    }
+
     return out;
+  }
+
+  private resolveParentBackground(el: ElementSnapshot, context: RuleContext): RGBA | null {
+    const allElements = [
+      ...context.extraction.headings,
+      ...context.extraction.links,
+      ...context.extraction.ariaElements,
+    ];
+
+    const elementsBySelector = new Map<string, ElementSnapshot>();
+    for (const e of allElements) {
+      elementsBySelector.set(e.selector, e);
+    }
+
+    let parentSelector = el.parentSelector;
+    while (parentSelector) {
+      const parent = elementsBySelector.get(parentSelector);
+      if (!parent?.computedStyle?.backgroundColor) break;
+
+      const bg = parseColor(parent.computedStyle.backgroundColor);
+      if (bg && bg.a > 0) {
+        return bg;
+      }
+
+      parentSelector = parent.parentSelector;
+    }
+
+    return null;
+  }
+
+  private async runAIAnalysis(
+    elements: ElementSnapshot[],
+    context: RuleContext,
+    provider: AIProvider,
+    standard: 'AA' | 'AAA',
+  ): Promise<RuleResult[]> {
+    const prompt = this.buildContrastAiPrompt(elements, context, standard);
+    const analysis = await provider.analyze(prompt, context);
+    const parsed = this.parseAIResponseWithSchema(analysis.raw, ContrastAIResponseSchema);
+
+    if (!parsed?.results) return [];
+
+    const out: RuleResult[] = [];
+    const elementsBySelector = new Map<string, ElementSnapshot>();
+    for (const el of elements) {
+      elementsBySelector.set(el.selector, el);
+    }
+
+    for (const result of parsed.results) {
+      const el = elementsBySelector.get(result.element);
+      if (!el) continue;
+
+      if (result.wcagLevel === 'fail-AA') {
+        out.push(
+          this.makeResult(el, {
+            severity: 'moderate',
+            source: 'ai',
+            message: `AI analysis: contrast may fail WCAG ${standard}.`,
+            suggestion: result.suggestion,
+            confidence: result.confidence,
+            context: {
+              foreground: result.foreground,
+              background: result.background,
+              estimatedRatio: result.estimatedRatio,
+              latencyMs: analysis.latencyMs,
+              attempts: analysis.attempts,
+            },
+          }),
+        );
+      }
+    }
+
+    return out;
+  }
+
+  private buildContrastAiPrompt(
+    elements: ElementSnapshot[],
+    context: RuleContext,
+    standard: 'AA' | 'AAA',
+  ): string {
+    const elementData = elements.slice(0, 20).map((el) => ({
+      selector: el.selector,
+      textContent: el.textContent.slice(0, 100),
+      color: el.computedStyle?.color,
+      backgroundColor: el.computedStyle?.backgroundColor,
+      fontSize: el.computedStyle?.fontSize,
+      fontWeight: el.computedStyle?.fontWeight,
+      surroundingText: el.surroundingText?.slice(0, 100),
+    }));
+
+    const outputSchema = {
+      type: 'object',
+      properties: {
+        results: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              element: { type: 'string' },
+              foreground: { type: 'string' },
+              background: { type: 'string' },
+              estimatedRatio: { type: 'number' },
+              wcagLevel: { type: 'string', enum: ['pass-AAA', 'pass-AA', 'fail-AA'] },
+              suggestion: { type: 'string' },
+              confidence: { type: 'number' },
+            },
+            required: [
+              'element',
+              'foreground',
+              'background',
+              'wcagLevel',
+              'suggestion',
+              'confidence',
+            ],
+          },
+        },
+      },
+      required: ['results'],
+    };
+
+    return [
+      'You are an accessibility auditor evaluating color contrast.',
+      '',
+      '# Task',
+      `Analyze these elements for WCAG ${standard} contrast compliance.`,
+      'These elements have transparent or complex backgrounds that could not be computed statically.',
+      'Estimate the effective foreground and background colors and contrast ratio.',
+      '',
+      '# Page Context',
+      `Title: ${context.extraction.pageTitle}`,
+      '',
+      '# Elements',
+      JSON.stringify(elementData, null, 2),
+      '',
+      '# Output Schema',
+      JSON.stringify(outputSchema, null, 2),
+      '',
+      'Return ONLY valid JSON matching the output schema.',
+    ].join('\n');
   }
 }

@@ -17,9 +17,9 @@
 | A     | A1     | ✅ COMPLETED | Critical Bug Fixes (5 bugs fixed)          |
 | A     | A2     | ✅ COMPLETED | DRY Cleanup & Shared Utilities             |
 | A     | A3     | ✅ COMPLETED | Test Coverage for Critical Paths           |
-| B     | B1     | ⏳ PENDING   | Zod-Based Structured AI Outputs            |
-| B     | B2     | ⏳ PENDING   | Contextual Enrichment for AI Rules         |
-| B     | B3     | ⏳ PENDING   | Complete Keyboard & Contrast Rules         |
+| B     | B1     | ✅ COMPLETED | Zod-Based Structured AI Outputs            |
+| B     | B2     | ✅ COMPLETED | Contextual Enrichment for AI Rules         |
+| B     | B3     | ✅ COMPLETED | Complete Keyboard & Contrast Rules         |
 | C     | C1     | ⏳ PENDING   | Playground API Routes & Backend            |
 | C     | C2     | ⏳ PENDING   | Playground UI: Main Auditor Page           |
 | C     | C3     | ⏳ PENDING   | Playground UI: HTML Editor & Rule Explorer |
@@ -28,7 +28,7 @@
 | D     | D2     | ⏳ PENDING   | Complete GitHub Action & CI Pipeline       |
 | D     | D3     | ⏳ PENDING   | Documentation, CONTRIBUTING, & Launch      |
 
-**Overall Progress: 3/13 prompts completed (~23%)**
+**Overall Progress: 6/13 prompts completed (~46%)**
 
 ---
 
@@ -755,6 +755,14 @@ Write tests in `packages/rules/src/schemas.test.ts`:
 **WHAT COMES NEXT:**
 Prompt B2 enriches element snapshots with surrounding context and landmark attribution.
 
+> ✅ **COMPLETED** — Zod-based structured outputs implemented:
+>
+> - Added `zod` and `zod-to-json-schema` dependencies to `@a11y-ai/rules`
+> - Created `packages/rules/src/schemas.ts` with Zod schemas for all 9 AI rules
+> - Added `parseAIResponseWithSchema<T>()` method to `BaseRule` for type-safe parsing
+> - Updated `PromptBuilder.outputFormat()` to accept Zod schemas and convert to JSON schema
+> - Exported all schemas from the rules package
+
 ---
 
 ### Prompt B2 — Contextual Enrichment for AI Rules
@@ -948,6 +956,14 @@ In `packages/rules/src/rules/alt-text/AltTextRule.ts`, update `buildAltQualityPr
 
 **WHAT COMES NEXT:**
 Prompt B3 completes the two weakest rules: Keyboard (no AI, no tab simulator) and Contrast (no AI, no bold detection).
+
+> ✅ **COMPLETED** — Contextual enrichment implemented:
+>
+> - Extended `ElementSnapshot` with `surroundingText`, `landmark`, and `parentSelector` fields
+> - Added `fontWeight` to `ComputedStyleSubset` for bold detection
+> - Created `getLandmark()` and `getSurroundingText()` utilities in extraction utils
+> - Updated `DOMExtractor` to populate all new contextual fields
+> - All extracted elements now include landmark region and surrounding text context
 
 ---
 
@@ -1155,6 +1171,15 @@ Change `requiresAI: true` in the constructor. Import `ContrastAIResponseSchema`.
 
 **WHAT COMES NEXT:**
 Phase C builds the frontend playground that lets users try a11y-ai without installing anything.
+
+> ✅ **COMPLETED** — Keyboard and Contrast rules enhanced:
+>
+> - Created `packages/rules/src/rules/keyboard/tabOrder.ts` with `buildTabOrder()` utility
+> - Added AI analysis to `KeyboardRule` for tab order evaluation and focus trap detection
+> - Added bold detection to `ContrastRule` (14px bold = large text per WCAG)
+> - Added parent background resolution for transparent backgrounds
+> - Added AI analysis for complex backgrounds (gradients, images)
+> - Both rules now have `requiresAI: true` with optional AI enhancement
 
 ---
 

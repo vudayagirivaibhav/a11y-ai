@@ -10,3 +10,4 @@ apps/*/.next
 .next
 apps/*/.next
 *.tsbuildinfo
+.pnpm-store/

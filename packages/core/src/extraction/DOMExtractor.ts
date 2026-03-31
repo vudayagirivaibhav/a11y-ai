@@ -13,6 +13,8 @@ import {
   buildSelector,
   getBoundingBox,
   getComputedStyleSubset,
+  getLandmark,
+  getSurroundingText,
   normalizeText,
   sanitizeHtml,
   truncateContent,
@@ -296,14 +298,21 @@ export class DOMExtractor {
     getComputedStyle: (el: Element) => CSSStyleDeclaration,
   ): ElementSnapshot {
     const options = this.mergedOptions();
+    const style = getComputedStyleSubset(element, getComputedStyle);
     return {
       selector: buildSelector(element),
       html: truncateContent(element.outerHTML ?? '', options.maxElementHtmlLength),
       tagName: element.tagName.toLowerCase(),
       attributes: attributesToRecord(element),
       textContent: truncateContent(normalizeText(element.textContent ?? ''), options.maxTextLength),
-      computedStyle: getComputedStyleSubset(element, getComputedStyle),
+      computedStyle: {
+        ...style,
+        fontWeight: getComputedStyle(element).fontWeight ?? '',
+      },
       boundingBox: getBoundingBox(element),
+      surroundingText: getSurroundingText(element, options.maxTextLength),
+      landmark: getLandmark(element),
+      parentSelector: element.parentElement ? buildSelector(element.parentElement) : null,
     };
   }
 

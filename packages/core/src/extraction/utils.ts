@@ -165,3 +165,67 @@ export function attributesToRecord(element: Element): Record<string, string> {
   }
   return attrs;
 }
+
+const LANDMARK_ROLES = new Set([
+  'main',
+  'navigation',
+  'complementary',
+  'contentinfo',
+  'banner',
+  'search',
+  'form',
+  'region',
+]);
+
+const LANDMARK_TAGS: Record<string, string> = {
+  main: 'main',
+  nav: 'navigation',
+  aside: 'complementary',
+  footer: 'contentinfo',
+  header: 'banner',
+  form: 'form',
+};
+
+/**
+ * Walk up the DOM tree to find the nearest landmark ancestor.
+ * Returns the landmark role name or null.
+ */
+export function getLandmark(element: Element): string | null {
+  let current: Element | null = element.parentElement;
+  while (current) {
+    const role = current.getAttribute('role');
+    if (role && LANDMARK_ROLES.has(role)) return role;
+    const tag = current.tagName.toLowerCase();
+    if (LANDMARK_TAGS[tag]) return LANDMARK_TAGS[tag]!;
+    current = current.parentElement;
+  }
+  return null;
+}
+
+const BLOCK_TAGS = new Set([
+  'p',
+  'div',
+  'section',
+  'article',
+  'li',
+  'td',
+  'th',
+  'blockquote',
+  'figcaption',
+  'figure',
+]);
+
+/**
+ * Get the text content of the nearest block-level ancestor, trimmed to maxLength.
+ */
+export function getSurroundingText(element: Element, maxLength = 200): string {
+  let current: Element | null = element.parentElement;
+  while (current) {
+    if (BLOCK_TAGS.has(current.tagName.toLowerCase())) {
+      const text = normalizeText(current.textContent ?? '');
+      return text.slice(0, maxLength);
+    }
+    current = current.parentElement;
+  }
+  return '';
+}

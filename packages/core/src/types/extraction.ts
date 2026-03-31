@@ -13,6 +13,9 @@ export interface ComputedStyleSubset {
   /** CSS `font-size` value (e.g., `16px`). */
   fontSize: string;
 
+  /** CSS `font-weight` value (e.g., `400`, `bold`). */
+  fontWeight?: string;
+
   /** CSS `display` value (e.g., `block`, `none`). */
   display: string;
 
@@ -70,6 +73,24 @@ export interface ElementSnapshot {
 
   /** Bounding box (best-effort; may be missing for jsdom parsing). */
   boundingBox?: BoundingBox;
+
+  /**
+   * Text content of the nearest block-level ancestor (up to 200 characters).
+   * Used to give AI rules surrounding paragraph context.
+   */
+  surroundingText?: string;
+
+  /**
+   * The ARIA landmark region this element belongs to.
+   * E.g., 'main', 'navigation', 'complementary', 'contentinfo', 'banner', 'form', 'search'.
+   * null if no landmark ancestor is found.
+   */
+  landmark?: string | null;
+
+  /**
+   * Selector of the parent element. Used to walk the DOM for context resolution.
+   */
+  parentSelector?: string | null;
 }
 
 /**

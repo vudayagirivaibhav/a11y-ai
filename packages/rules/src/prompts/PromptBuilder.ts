@@ -1,4 +1,6 @@
 import type { ElementSnapshot } from '@a11y-ai/core/types';
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import type { ZodTypeAny } from 'zod';
 
 import { PROMPT_FRAGMENTS } from './fragments.js';
 import { estimateTokens, trimToTokens } from './token.js';
@@ -41,10 +43,14 @@ export class PromptBuilder {
   }
 
   /**
-   * Provide a JSON schema-like object describing the output format.
+   * Provide a JSON schema-like object or Zod schema describing the output format.
    */
-  outputFormat(schema: unknown): this {
-    this.outputSchema = schema;
+  outputFormat(schema: unknown | ZodTypeAny): this {
+    if (schema && typeof (schema as ZodTypeAny).safeParse === 'function') {
+      this.outputSchema = zodToJsonSchema(schema as ZodTypeAny);
+    } else {
+      this.outputSchema = schema;
+    }
     return this;
   }
 

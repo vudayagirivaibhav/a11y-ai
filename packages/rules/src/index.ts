@@ -6,6 +6,7 @@ export * from './registerBuiltinRules.js';
 export * from './createRule.js';
 export * from './metadata.js';
 export * from './utils.js';
+export * from './schemas.js';
 
 export * from './prompts/PromptBuilder.js';
 export * from './prompts/fragments.js';
