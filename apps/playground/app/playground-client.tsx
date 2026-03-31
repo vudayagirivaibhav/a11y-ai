@@ -3,14 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 type Preset = 'quick' | 'standard' | 'thorough';
+type InputMode = 'html' | 'url';
 
-/**
- * Minimal client-safe view model used by the playground UI.
- *
- * We intentionally avoid importing the full `AuditResult` type from `@a11y-ai/core`
- * in this client component to keep the browser bundle isolated from server-only
- * workspace code paths during Next.js development.
- */
 type PlaygroundViolation = {
   selector: string;
   message: string;
@@ -138,6 +132,11 @@ const SAMPLE_DESCRIPTIONS: Record<SampleKey, string> = {
   blog: 'Article page with contrast, readability, missing lang, and media issues.',
 };
 
+const EXAMPLE_URLS = [
+  { label: 'Example.com', url: 'https://example.com' },
+  { label: 'Wikipedia', url: 'https://en.wikipedia.org/wiki/Web_accessibility' },
+];
+
 function formatConfidence(value?: number): string {
   if (typeof value !== 'number') return '-';
   return `${Math.round(value * 100)}%`;
@@ -150,14 +149,15 @@ function scoreTone(score: number): 'good' | 'warn' | 'bad' {
 }
 
 export function PlaygroundClient() {
+  const [inputMode, setInputMode] = useState<InputMode>('html');
   const [html, setHtml] = useState<string>(SAMPLE_HTML.marketing);
+  const [url, setUrl] = useState<string>('');
   const [preset, setPreset] = useState<Preset>('quick');
   const [selectedSample, setSelectedSample] = useState<SampleKey>('marketing');
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<PlaygroundAuditResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [lastAction, setLastAction] = useState<string>('none');
 
   useEffect((): void => {
     setIsHydrated(true);
@@ -198,16 +198,18 @@ export function PlaygroundClient() {
   const rulesExecutedCount = result?.metadata?.rulesExecuted?.length ?? 0;
 
   async function runAudit(): Promise<void> {
-    setLastAction('run-audit');
     setIsLoading(true);
     setError(null);
 
     try {
+      const body = inputMode === 'url' ? { url, preset } : { html, preset };
+
       const response = await fetch('/api/audit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ html, preset }),
+        body: JSON.stringify(body),
       });
+
       const raw = await response.text();
       let data: PlaygroundResponse;
       try {
@@ -234,22 +236,27 @@ export function PlaygroundClient() {
   }
 
   function loadSample(sample: SampleKey): void {
-    setLastAction(`sample:${sample}`);
     setSelectedSample(sample);
     setHtml(SAMPLE_HTML[sample]);
     setError(null);
     setResult(null);
   }
 
+  function loadExampleUrl(exampleUrl: string): void {
+    setUrl(exampleUrl);
+    setError(null);
+    setResult(null);
+  }
+
   return (
-    <main className="playground-shell">
+    <div className="playground-shell">
       <section className="hero">
         <div>
           <p className="eyebrow">a11y-ai playground</p>
-          <h1>Test accessibility issues with a UI that makes sense</h1>
+          <h1>Test accessibility issues with AI-powered analysis</h1>
           <p className="hero-copy">
-            Paste HTML, choose an audit preset, and inspect results as a product team would: score,
-            severity breakdown, grouped issues, and actionable fixes.
+            Paste HTML or enter a URL, choose an audit preset, and inspect results: score, severity
+            breakdown, grouped issues, and actionable fixes.
           </p>
           <div className="hero-actions">
             <button className="primary" onClick={runAudit} disabled={isLoading} type="button">
@@ -271,8 +278,8 @@ export function PlaygroundClient() {
           <p className="hero-card-label">What this demo does</p>
           <ul>
             <li>Runs the real audit pipeline in `@a11y-ai/core`</li>
-            <li>Uses a local demo AI handler (no API key required)</li>
-            <li>Lets you test rule behavior before wiring CLI/CI</li>
+            <li>Supports both HTML input and live URL auditing</li>
+            <li>Uses demo AI handler (no API key required for quick preset)</li>
           </ul>
         </div>
       </section>
@@ -281,42 +288,101 @@ export function PlaygroundClient() {
         <div className="panel input-panel">
           <div className="panel-header">
             <div>
-              <h2>Input HTML</h2>
-              <p>Paste a page fragment or full HTML document.</p>
+              <h2>Input</h2>
+              <p>Paste HTML or enter a URL to audit.</p>
             </div>
             <div className={isHydrated ? 'client-status ready' : 'client-status'}>
               {isHydrated ? 'JS ready' : 'Waiting for JS'}
             </div>
           </div>
 
-          <div className="samples">
-            {(Object.keys(SAMPLE_HTML) as SampleKey[]).map((sample) => (
-              <button
-                key={sample}
-                className={sample === selectedSample ? 'sample-chip active' : 'sample-chip'}
-                onClick={() => loadSample(sample)}
-                type="button"
-                title={SAMPLE_DESCRIPTIONS[sample]}
-              >
-                {sample}
-              </button>
-            ))}
+          <div className="input-mode-tabs">
+            <button
+              type="button"
+              className={`input-mode-tab ${inputMode === 'html' ? 'active' : ''}`}
+              onClick={() => setInputMode('html')}
+            >
+              HTML
+            </button>
+            <button
+              type="button"
+              className={`input-mode-tab ${inputMode === 'url' ? 'active' : ''}`}
+              onClick={() => setInputMode('url')}
+            >
+              URL
+            </button>
           </div>
-          <p className="sample-description">{SAMPLE_DESCRIPTIONS[selectedSample]}</p>
 
-          <textarea
-            className="editor"
-            value={html}
-            onChange={(event) => setHtml(event.target.value)}
-            spellCheck={false}
-            aria-label="HTML input"
-          />
+          {inputMode === 'html' ? (
+            <>
+              <div className="samples">
+                {(Object.keys(SAMPLE_HTML) as SampleKey[]).map((sample) => (
+                  <button
+                    key={sample}
+                    className={sample === selectedSample ? 'sample-chip active' : 'sample-chip'}
+                    onClick={() => loadSample(sample)}
+                    type="button"
+                    title={SAMPLE_DESCRIPTIONS[sample]}
+                  >
+                    {sample}
+                  </button>
+                ))}
+              </div>
+              <p className="sample-description">{SAMPLE_DESCRIPTIONS[selectedSample]}</p>
 
-          <div className="input-footer">
-            <span>{html.length.toLocaleString()} chars</span>
-            <span>Preset: {preset}</span>
-            <span>Last action: {lastAction}</span>
-          </div>
+              <textarea
+                className="editor"
+                value={html}
+                onChange={(event) => setHtml(event.target.value)}
+                spellCheck={false}
+                aria-label="HTML input"
+              />
+
+              <div className="input-footer">
+                <span>{html.length.toLocaleString()} chars</span>
+                <span>Preset: {preset}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="samples">
+                {EXAMPLE_URLS.map((example) => (
+                  <button
+                    key={example.url}
+                    className={url === example.url ? 'sample-chip active' : 'sample-chip'}
+                    onClick={() => loadExampleUrl(example.url)}
+                    type="button"
+                  >
+                    {example.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="url-input-group">
+                <input
+                  type="url"
+                  className="url-input"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder="https://example.com"
+                  aria-label="URL to audit"
+                />
+              </div>
+
+              <div className="input-footer" style={{ marginTop: '20px' }}>
+                <span>Mode: URL audit</span>
+                <span>Preset: {preset}</span>
+              </div>
+
+              <div className="empty-state" style={{ marginTop: '20px' }}>
+                <h3>URL Auditing</h3>
+                <p>
+                  Enter a public URL to audit. The server will fetch the page and run the
+                  accessibility analysis. Private/internal URLs are blocked for security.
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="panel results-panel">
@@ -333,12 +399,12 @@ export function PlaygroundClient() {
                   const blob = new Blob([JSON.stringify(result, null, 2)], {
                     type: 'application/json',
                   });
-                  const url = URL.createObjectURL(blob);
+                  const downloadUrl = URL.createObjectURL(blob);
                   const anchor = document.createElement('a');
-                  anchor.href = url;
+                  anchor.href = downloadUrl;
                   anchor.download = 'a11y-ai-playground-report.json';
                   anchor.click();
-                  URL.revokeObjectURL(url);
+                  URL.revokeObjectURL(downloadUrl);
                 }}
               >
                 Download JSON
@@ -352,8 +418,8 @@ export function PlaygroundClient() {
             <div className="empty-state">
               <h3>Run an audit to see a report</h3>
               <p>
-                Start with one of the samples, then inspect the score, grouped violations, and
-                suggestions.
+                Start with one of the samples or enter a URL, then inspect the score, grouped
+                violations, and suggestions.
               </p>
             </div>
           ) : null}
@@ -507,6 +573,6 @@ export function PlaygroundClient() {
           ) : null}
         </div>
       </section>
-    </main>
+    </div>
   );
 }
