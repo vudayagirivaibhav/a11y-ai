@@ -75,7 +75,10 @@ function buildHtmlContext(extraction: ExtractionResult, options: RuleContextBuil
 
   const activeRules = options.activeRules ?? [options.ruleId];
 
-  if (activeRules.includes('alt-text-quality')) {
+  const normalizeRuleId = (id: string): string => id.replace(/^ai\//, '');
+  const normalizedActiveRules = activeRules.map(normalizeRuleId);
+
+  if (normalizedActiveRules.includes('alt-text-quality')) {
     lines.push(`# Images`);
     for (const img of extraction.images.slice(0, 50)) {
       lines.push(
@@ -88,15 +91,17 @@ function buildHtmlContext(extraction: ExtractionResult, options: RuleContextBuil
     lines.push('');
   }
 
-  if (activeRules.includes('link-text-quality')) {
+  if (normalizedActiveRules.includes('link-text-quality')) {
     lines.push(`# Links`);
     for (const link of extraction.links.slice(0, 50)) {
-      lines.push(`- ${link.selector} href=${link.href ?? '(none)'} text=${truncateContent(link.textContent, 120)}`);
+      lines.push(
+        `- ${link.selector} href=${link.href ?? '(none)'} text=${truncateContent(link.textContent, 120)}`,
+      );
     }
     lines.push('');
   }
 
-  if (activeRules.includes('form-label-relevance')) {
+  if (normalizedActiveRules.includes('form-label-relevance')) {
     lines.push(`# Forms`);
     for (const form of extraction.forms.slice(0, 10)) {
       lines.push(`- form: ${form.selector}`);
@@ -111,7 +116,7 @@ function buildHtmlContext(extraction: ExtractionResult, options: RuleContextBuil
     lines.push('');
   }
 
-  if (activeRules.includes('contrast-analysis')) {
+  if (normalizedActiveRules.includes('contrast-analysis')) {
     lines.push(`# Headings (style hints)`);
     for (const h of extraction.headings.slice(0, 50)) {
       const style = h.computedStyle;

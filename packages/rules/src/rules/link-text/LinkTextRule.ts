@@ -370,25 +370,6 @@ export class LinkTextRule extends BaseRule {
 
     return out;
   }
-
-  private makeResult(
-    element: LinkElement,
-    options: Omit<RuleResult, 'ruleId' | 'category' | 'element'> & {
-      context?: Record<string, unknown>;
-    },
-  ): RuleResult {
-    return {
-      ruleId: this.id,
-      category: this.category,
-      element,
-      severity: options.severity,
-      message: options.message,
-      suggestion: options.suggestion,
-      confidence: options.confidence,
-      source: options.source,
-      context: options.context,
-    };
-  }
 }
 
 function escapeRegExp(value: string): string {

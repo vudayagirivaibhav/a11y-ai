@@ -15,6 +15,7 @@ import { DOMExtractor } from '../extraction/DOMExtractor.js';
 import { extractFromAutomationPage } from '../extraction/fromPage.js';
 
 import { MemoryCacheAdapter } from '../utils/cache.js';
+import { looksLikeHtml, looksLikeUrl } from '../utils/url.js';
 import { AccessibilityScorer } from '../scoring/AccessibilityScorer.js';
 
 import type { AuditConfig } from './types.js';
@@ -111,15 +112,73 @@ export class A11yAuditor extends EventEmitter {
     const errors: AuditResult['errors'] = [];
     const overallTimeoutMs = this.config.overallTimeoutMs ?? DEFAULT_OVERALL_TIMEOUT_MS;
 
-    const result = await withTimeout(
-      this.runPipelineUnsafe(input, startedAt, startedIso, errors),
-      overallTimeoutMs,
-    ).catch((error) => {
-      errors.push({ stage: 'audit', message: 'Audit failed', cause: error });
-      throw error;
-    });
+    try {
+      const result = await withTimeout(
+        this.runPipelineUnsafe(input, startedAt, startedIso, errors),
+        overallTimeoutMs,
+      );
+      return { ...result, errors };
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.message.includes('timed out');
+      errors.push({
+        stage: 'audit',
+        message: isTimeout ? 'Audit timed out' : 'Audit failed',
+        cause: error,
+      });
 
-    return { ...result, errors };
+      const completedAt = Date.now();
+      const completedIso = new Date(completedAt).toISOString();
+
+      return {
+        url: input.url ?? 'about:blank',
+        timestamp: completedIso,
+        extraction: {
+          url: input.url ?? 'about:blank',
+          images: [],
+          links: [],
+          forms: [],
+          headings: [],
+          ariaElements: [],
+          pageTitle: '',
+          pageLanguage: null,
+          metaDescription: null,
+          documentOutline: [],
+          rawHTML: '',
+        },
+        axeViolations: [],
+        ruleResults: [],
+        mergedViolations: [],
+        summary: {
+          score: 0,
+          grade: 'F',
+          categories: {},
+          totalViolations: 0,
+          bySeverity: { critical: 0, serious: 0, moderate: 0, minor: 0 },
+          elementsAnalyzed: 0,
+          aiCalls: 0,
+          estimatedTokens: 0,
+          auditDurationMs: completedAt - startedAt,
+          wcagCompliance: {
+            level: 'none',
+            passedCriteria: [],
+            failedCriteria: [],
+          },
+        },
+        metadata: {
+          schemaVersion: '1.0',
+          startedAt: startedIso,
+          completedAt: completedIso,
+          axeVersion: '',
+          a11yAiVersion: '',
+          aiProvider: this.config.aiProvider.provider,
+          model: this.config.aiProvider.model ?? '',
+          durationMs: completedAt - startedAt,
+          rulesExecuted: [],
+          rulesFailed: [],
+        },
+        errors,
+      };
+    }
   }
 
   private async runPipelineUnsafe(
@@ -336,19 +395,6 @@ function wrapProviderWithCounter(provider: AIProvider, onCall: () => void): AIPr
   }
 
   return wrapped;
-}
-
-function looksLikeHtml(text: string): boolean {
-  return text.startsWith('<') && text.includes('>');
-}
-
-function looksLikeUrl(text: string): boolean {
-  try {
-    new URL(text);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function workerLoop<T>(queue: T[], fn: (item: T) => Promise<void>): Promise<void> {

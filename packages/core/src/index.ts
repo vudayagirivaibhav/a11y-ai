@@ -1,6 +1,6 @@
 export * from './types/index.js';
 export * from './axe/normalize.js';
-export * from './axe/merge.js';
+export { mergeAxeAndRuleResults } from './auditor/merge.js';
 export { AxeRunner } from './axe/AxeRunner.js';
 export { DOMExtractor } from './extraction/DOMExtractor.js';
 export { buildRuleContext } from './extraction/context.js';
@@ -10,6 +10,7 @@ export { AccessibilityScorer } from './scoring/AccessibilityScorer.js';
 export { ReportGenerator } from './reporting/ReportGenerator.js';
 export { fetchImage } from './utils/fetchImage.js';
 export { parseColor, calculateContrastRatio, alphaBlend } from './utils/color.js';
+export { looksLikeHtml, looksLikeUrl, resolveUrl } from './utils/url.js';
 export type {
   Reporter,
   JsonReportOptions,

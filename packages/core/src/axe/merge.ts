@@ -1,3 +1,9 @@
+/**
+ * @deprecated Use `mergeAxeAndRuleResults` from `../auditor/merge.js` instead.
+ * This file is kept for backward compatibility only.
+ */
+export { mergeAxeAndRuleResults } from '../auditor/merge.js';
+
 import type { AiIssue } from '../types/results.js';
 import type { AxeViolation, ViolationSeverity } from '../types/axe.js';
 import type { Violation } from '../types/violation.js';
@@ -11,9 +17,19 @@ const severityRank: Record<ViolationSeverity, number> = {
 
 const aiToAxeIdHints: Record<string, readonly string[]> = {
   'alt-text-quality': ['image-alt', 'input-image-alt', 'object-alt', 'area-alt'],
+  'ai/alt-text-quality': ['image-alt', 'input-image-alt', 'object-alt', 'area-alt'],
   'link-text-quality': ['link-name'],
+  'ai/link-text-quality': ['link-name'],
   'contrast-analysis': ['color-contrast'],
+  'ai/contrast-analysis': ['color-contrast'],
   'form-label-relevance': [
+    'label',
+    'select-name',
+    'textarea-name',
+    'input-button-name',
+    'aria-input-field-name',
+  ],
+  'ai/form-label-relevance': [
     'label',
     'select-name',
     'textarea-name',
@@ -23,6 +39,8 @@ const aiToAxeIdHints: Record<string, readonly string[]> = {
 };
 
 /**
+ * @deprecated Use `mergeAxeAndRuleResults` from `../auditor/merge.js` instead.
+ *
  * Merge axe-core violations with AI issues into a unified list.
  *
  * Dedup heuristic:
@@ -97,4 +115,3 @@ export function mergeViolations(axeViolations: AxeViolation[], aiIssues: AiIssue
 function worstSeverity(a: ViolationSeverity, b: ViolationSeverity): ViolationSeverity {
   return severityRank[a] >= severityRank[b] ? a : b;
 }
-

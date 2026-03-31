@@ -4,6 +4,7 @@ import type { ElementSnapshot } from '@a11y-ai/core/types';
 import type { Rule, RuleContext, RuleResult, ViolationCategory } from './types.js';
 
 import { PromptBuilder } from './prompts/PromptBuilder.js';
+import { extractJsonMaybe, safeJsonParse } from './utils.js';
 
 /**
  * Base class for implementing rules with shared helpers:
@@ -131,19 +132,26 @@ export abstract class BaseRule implements Rule {
 
     return out;
   }
-}
 
-function extractJsonMaybe(text: string): string {
-  const trimmed = text.trim();
-  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenceMatch?.[1]) return fenceMatch[1].trim();
-  return trimmed;
-}
-
-function safeJsonParse(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
+  /**
+   * Helper to create a RuleResult with common fields pre-filled.
+   */
+  protected makeResult(
+    element: ElementSnapshot,
+    options: Omit<RuleResult, 'ruleId' | 'category' | 'element'> & {
+      context?: Record<string, unknown>;
+    },
+  ): RuleResult {
+    return {
+      ruleId: this.id,
+      category: this.category,
+      element,
+      severity: options.severity,
+      message: options.message,
+      suggestion: options.suggestion,
+      confidence: options.confidence,
+      source: options.source,
+      context: options.context,
+    };
   }
 }

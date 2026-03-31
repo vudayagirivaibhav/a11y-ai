@@ -7,12 +7,7 @@ import type {
 
 import { BaseRule } from '../../BaseRule.js';
 import type { RuleContext, RuleResult } from '../../types.js';
-
-function normalizeText(text: string | null | undefined): string {
-  return String(text ?? '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+import { clamp01, extractJsonMaybe, normalizeText, safeJsonParse } from '../../utils.js';
 
 function isHiddenField(field: FormFieldElement): boolean {
   return (field.type ?? '').toLowerCase() === 'hidden';
@@ -75,7 +70,13 @@ export class FormLabelRule extends BaseRule {
     const aiEnabled = settings?.aiEnabled !== false;
     if (!aiEnabled) return out;
 
-    const aiForms = forms.filter((f) => !out.some((r) => r.element.selector === f.selector));
+    const fieldSelectorsWithStaticFindings = new Set(out.map((r) => r.element.selector));
+    const aiForms = forms.filter((form) => {
+      const hasStaticFindingsForFields = form.fields.some((field) =>
+        fieldSelectorsWithStaticFindings.has(field.selector),
+      );
+      return !hasStaticFindingsForFields;
+    });
     if (aiForms.length === 0) return out;
 
     const batchSize = context.config.rules?.[this.id]?.batchSize ?? this.defaultBatchSize;
@@ -272,46 +273,5 @@ export class FormLabelRule extends BaseRule {
     }
 
     return out;
-  }
-
-  private makeResult(
-    element: FormFieldElement,
-    options: Omit<RuleResult, 'ruleId' | 'category' | 'element'> & {
-      context?: Record<string, unknown>;
-    },
-  ): RuleResult {
-    return {
-      ruleId: this.id,
-      category: this.category,
-      element,
-      severity: options.severity,
-      message: options.message,
-      suggestion: options.suggestion,
-      confidence: options.confidence,
-      source: options.source,
-      context: options.context,
-    };
-  }
-}
-
-function clamp01(value: number): number {
-  if (Number.isNaN(value)) return 0;
-  if (value < 0) return 0;
-  if (value > 1) return 1;
-  return value;
-}
-
-function extractJsonMaybe(text: string): string {
-  const trimmed = text.trim();
-  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenceMatch?.[1]) return fenceMatch[1].trim();
-  return trimmed;
-}
-
-function safeJsonParse(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
   }
 }
