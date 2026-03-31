@@ -1,16 +1,35 @@
 {
   "name": "@a11y-ai/github-action",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "GitHub Action for running a11y-ai audits in CI.",
   "license": "MIT",
   "type": "module",
-  "private": true,
   "engines": {
     "node": ">=18"
   },
   "files": [
     "dist",
-    "action.yml"
+    "action.yml",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vudayagirivaibhav/a11y-ai"
+  },
+  "homepage": "https://github.com/vudayagirivaibhav/a11y-ai",
+  "bugs": {
+    "url": "https://github.com/vudayagirivaibhav/a11y-ai/issues"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "github-action",
+    "ci",
+    "audit",
+    "typescript"
   ],
   "scripts": {
     "build": "tsup",

@@ -4,12 +4,11 @@ import path from 'node:path';
 
 import { A11yAuditor, BatchAuditor, ReportGenerator, toAuditConfig } from '@a11y-ai/core';
 import { RuleRegistry, registerBuiltinRules } from '@a11y-ai/rules';
+import { Command } from 'commander';
+import ora from 'ora';
 
 import { compareWith } from './lib/compare.js';
 import { findConfigFile, loadConfigFile, mergeConfig } from './lib/config.js';
-
-type Commander = typeof import('commander');
-type Ora = typeof import('ora');
 
 type WcagLevel = 'A' | 'AA' | 'AAA';
 type ProviderName = 'openai' | 'anthropic' | 'ollama' | 'custom';
@@ -19,17 +18,8 @@ async function main(): Promise<void> {
   const cfgPath = findConfigFile(cwd);
   const cfg = cfgPath ? await loadConfigFile(cfgPath) : {};
 
-  const commander = await tryImportCommander();
-  if (!commander) {
-    console.error(
-      'Missing optional dependency "commander". Install: pnpm -C packages/cli add commander',
-    );
-    process.exit(2);
-  }
-
-  const { Command } = commander;
   const program = new Command();
-  program.name('a11y-ai').description('AI-powered accessibility auditor').version('0.0.0');
+  program.name('a11y-ai').description('AI-powered accessibility auditor').version('0.1.0');
 
   program
     .command('audit')
@@ -86,8 +76,7 @@ async function main(): Promise<void> {
         verbose: Boolean(options.verbose),
       });
 
-      const ora = await tryImportOra();
-      const spinner = ora ? ora.default('Starting audit...').start() : null;
+      const spinner = ora('Starting audit...').start();
 
       const auditConfig = toAuditConfig({
         preset: merged.preset,
@@ -115,14 +104,12 @@ async function main(): Promise<void> {
       if (batchMode) {
         const batch = new BatchAuditor(auditConfig);
 
-        if (spinner) {
-          batch.on('progress', (p: { completed: number; total: number; percent: number }) => {
-            spinner.text = `Auditing pages... (${p.completed}/${p.total})`;
-          });
-          batch.on('page:complete', (p: { target: string; score: number }) => {
-            if (merged.verbose) spinner.text = `Done: ${p.target} (score ${p.score})`;
-          });
-        }
+        batch.on('progress', (p: { completed: number; total: number; percent: number }) => {
+          spinner.text = `Auditing pages... (${p.completed}/${p.total})`;
+        });
+        batch.on('page:complete', (p: { target: string; score: number }) => {
+          if (merged.verbose) spinner.text = `Done: ${p.target} (score ${p.score})`;
+        });
 
         const maxPages = Number(options.maxPages ?? 50);
         const include = (options.include as string[]) ?? [];
@@ -136,7 +123,7 @@ async function main(): Promise<void> {
               exclude,
             });
 
-        spinner?.succeed(
+        spinner.succeed(
           `Batch audit complete. Avg score: ${batchResult.summary.averageScore} (${batchResult.summary.succeeded}/${batchResult.summary.totalPages} succeeded)`,
         );
 
@@ -170,35 +157,33 @@ async function main(): Promise<void> {
           : resolvedTarget.url;
 
       const auditor = new A11yAuditor(auditConfig);
-      if (spinner) {
-        const registry = RuleRegistry.create();
-        registerBuiltinRules(registry);
-        const enabled = registry.enabledRules(
-          toAuditConfig({ preset: merged.preset, provider: { name: 'custom' } }),
-        );
-        let done = 0;
-        const total = enabled.length;
+      const registry = RuleRegistry.create();
+      registerBuiltinRules(registry);
+      const enabled = registry.enabledRules(
+        toAuditConfig({ preset: merged.preset, provider: { name: 'custom' } }),
+      );
+      let done = 0;
+      const total = enabled.length;
 
-        auditor.on('start', () => {
-          spinner.text = 'Extracting DOM and running axe-core...';
-        });
-        auditor.on('axe:complete', () => {
-          spinner.text = `Running AI rules... (0/${total})`;
-        });
-        auditor.on('rule:start', (ruleId: string) => {
-          if (merged.verbose) spinner.text = `Running ${ruleId}... (${done}/${total})`;
-        });
-        auditor.on('rule:complete', () => {
-          done += 1;
-          spinner.text = `Running AI rules... (${done}/${total})`;
-        });
-      }
+      auditor.on('start', () => {
+        spinner.text = 'Extracting DOM and running axe-core...';
+      });
+      auditor.on('axe:complete', () => {
+        spinner.text = `Running AI rules... (0/${total})`;
+      });
+      auditor.on('rule:start', (ruleId: string) => {
+        if (merged.verbose) spinner.text = `Running ${ruleId}... (${done}/${total})`;
+      });
+      auditor.on('rule:complete', () => {
+        done += 1;
+        spinner.text = `Running AI rules... (${done}/${total})`;
+      });
       const result =
         resolvedTarget.kind === 'file'
           ? await auditor.auditHTML(htmlOrUrl)
           : await auditor.auditURL(htmlOrUrl);
 
-      spinner?.succeed(`Audit complete. Score: ${result.summary.score}`);
+      spinner.succeed(`Audit complete. Score: ${result.summary.score}`);
 
       const output =
         format === 'json'
@@ -287,22 +272,6 @@ function resolveTarget(
     return { kind: 'url', url: u.toString() };
   } catch {
     return { kind: 'file', path: path.resolve(cwd, target) };
-  }
-}
-
-async function tryImportCommander(): Promise<Commander | null> {
-  try {
-    return await import('commander');
-  } catch {
-    return null;
-  }
-}
-
-async function tryImportOra(): Promise<Ora | null> {
-  try {
-    return await import('ora');
-  } catch {
-    return null;
   }
 }
 

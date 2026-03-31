@@ -1,6 +1,6 @@
 {
   "name": "@a11y-ai/rules",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "AI-powered accessibility rules engine for a11y-ai.",
   "license": "MIT",
   "type": "module",
@@ -20,7 +20,27 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vudayagirivaibhav/a11y-ai"
+  },
+  "homepage": "https://github.com/vudayagirivaibhav/a11y-ai",
+  "bugs": {
+    "url": "https://github.com/vudayagirivaibhav/a11y-ai/issues"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "wcag",
+    "ai",
+    "rules",
+    "typescript"
   ],
   "scripts": {
     "build": "tsup",

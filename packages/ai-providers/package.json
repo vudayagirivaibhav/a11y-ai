@@ -1,6 +1,6 @@
 {
   "name": "@a11y-ai/ai-providers",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "AI provider adapters for a11y-ai (OpenAI/Anthropic/Ollama/Mock).",
   "license": "MIT",
   "type": "module",
@@ -14,7 +14,30 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vudayagirivaibhav/a11y-ai"
+  },
+  "homepage": "https://github.com/vudayagirivaibhav/a11y-ai",
+  "bugs": {
+    "url": "https://github.com/vudayagirivaibhav/a11y-ai/issues"
+  },
+  "keywords": [
+    "accessibility",
+    "a11y",
+    "ai",
+    "openai",
+    "anthropic",
+    "ollama",
+    "typescript"
+  ],
   "scripts": {
     "build": "tsup",
     "lint": "eslint src",
