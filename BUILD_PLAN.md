@@ -26,10 +26,10 @@
 | C     | C3     | ✅ COMPLETED | Playground UI: HTML Editor & Rule Explorer |
 | C     | C4     | ✅ COMPLETED | Playground Polish & Deployment             |
 | D     | D1     | ✅ COMPLETED | npm Publishing Pipeline                    |
-| D     | D2     | ⏳ PENDING   | Complete GitHub Action & CI Pipeline       |
+| D     | D2     | ✅ COMPLETED | Complete GitHub Action & CI Pipeline       |
 | D     | D3     | ⏳ PENDING   | Documentation, CONTRIBUTING, & Launch      |
 
-**Overall Progress: 11/13 prompts completed (~85%)**
+**Overall Progress: 12/13 prompts completed (~92%)**
 
 ### Code Quality Improvements (Post Phase B)
 
@@ -87,6 +87,46 @@ Additional work completed to improve code quality and maintainability:
   - Uses `changesets/action` for automated version management
   - Supports npm provenance for supply chain security
   - Creates GitHub releases on successful publish
+
+### Phase D2 Completion Notes
+
+**D2 — Complete GitHub Action & CI Pipeline:**
+
+- **Step 1: GitHub Action Enhancement**
+  - Added PR comment feature with `postPrComment()` function
+  - Formats violations in a clean markdown table
+  - Shows top 5 issues with severity emojis
+  - Collapsible "All violations" section
+  - Improved job summary with `writeSummary()` function
+  - Added `grade` output alongside score
+  - Better error handling with `failHard()` function
+  - Console logging for audit progress
+
+- **Step 2: Action.yml Improvements**
+  - Added branding (icon: check-circle, color: green)
+  - Added more outputs: grade, report-md-path, report-json-path, report-sarif-path
+  - Auto-uploads all report formats as artifacts
+  - Auto-uploads SARIF to GitHub Security tab
+  - Better error messages with `::error::` annotation
+
+- **Step 3: Documentation**
+  - Created `docs/github-action.md` with 8 workflow examples:
+    1. Basic audit (free, no API key)
+    2. AI-powered audit with OpenAI
+    3. PR comment on Vercel preview
+    4. Scheduled weekly audit
+    5. Audit local HTML build
+    6. Upload SARIF to GitHub Security
+    7. Multiple pages audit (matrix)
+    8. Custom threshold with failure handling
+  - Added troubleshooting section
+
+- **Step 4: CI Pipeline Upgrade**
+  - Matrix testing across Node 18, 20, 22
+  - Added concurrency control to cancel in-progress runs
+  - Added coverage upload to Codecov
+  - Added playground build job
+  - Added package exports verification job
 
 ### Phase C Completion Notes
 

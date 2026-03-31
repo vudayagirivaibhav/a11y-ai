@@ -5,21 +5,114 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
+    name: Test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test with coverage
+        run: pnpm test -- --coverage
+
+      - name: Upload coverage
+        if: matrix.node == 20 && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ./coverage
+          fail_ci_if_error: false
+
+  build-playground:
+    name: Build Playground
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: pnpm
-      - name: Install
+
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Lint
-        run: pnpm lint
-      - name: Typecheck
-        run: pnpm typecheck
-      - name: Test
-        run: pnpm test
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Build playground
+        run: pnpm --filter playground build
+
+  check-packages:
+    name: Check Package Exports
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Verify package exports
+        run: |
+          echo "Checking @a11y-ai/core exports..."
+          node -e "import('@a11y-ai/core').then(m => console.log('✓ @a11y-ai/core:', Object.keys(m).join(', ')))"
+
+          echo "Checking @a11y-ai/rules exports..."
+          node -e "import('@a11y-ai/rules').then(m => console.log('✓ @a11y-ai/rules:', Object.keys(m).join(', ')))"
+
+          echo "Checking @a11y-ai/ai-providers exports..."
+          node -e "import('@a11y-ai/ai-providers').then(m => console.log('✓ @a11y-ai/ai-providers:', Object.keys(m).join(', ')))"
+
+          echo "Checking @a11y-ai/cli exports..."
+          node -e "import('@a11y-ai/cli').then(m => console.log('✓ @a11y-ai/cli:', Object.keys(m).join(', ')))"
+
+          echo "All package exports verified!"

@@ -1,57 +1,81 @@
 name: 'a11y-ai Accessibility Audit'
-description: 'Run AI-powered accessibility audit on your site'
+description: 'Run AI-powered accessibility audits on your website or HTML files'
+author: 'vudayagirivaibhav'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
 inputs:
   url:
-    description: 'URL to audit'
+    description: 'URL to audit (mutually exclusive with html-path)'
     required: false
   html-path:
-    description: 'Path to HTML file'
+    description: 'Path to local HTML file to audit (mutually exclusive with url)'
     required: false
   preset:
-    description: 'Audit preset'
-    default: 'standard'
+    description: 'Audit preset: quick (free), standard (AI), thorough (AI + vision)'
+    default: 'quick'
   threshold:
-    description: 'Minimum passing score'
+    description: 'Minimum passing score (0-100)'
     default: '70'
   provider:
-    description: 'AI provider'
+    description: 'AI provider: openai, anthropic, ollama, custom'
     default: 'openai'
   api-key:
-    description: 'AI provider API key'
-    required: true
+    description: 'AI provider API key (not required for quick preset)'
+    required: false
   format:
-    description: 'Report format'
+    description: 'Primary report format: html, markdown, json, sarif'
     default: 'markdown'
   fail-on-violations:
-    description: 'Fail if critical violations found'
+    description: 'Fail the action if critical violations are found'
     default: 'true'
+
 outputs:
   score:
-    description: 'Accessibility score 0-100'
-    value: ${{ steps.run.outputs.score }}
+    description: 'Accessibility score (0-100)'
+  grade:
+    description: 'Letter grade (A, B, C, D, F)'
   violations:
-    description: 'Number of violations found'
-    value: ${{ steps.run.outputs.violations }}
+    description: 'Total number of violations found'
+  passed:
+    description: 'Whether the audit passed (true/false)'
+  fail-reason:
+    description: 'Reason for failure (if any)'
   report-path:
-    description: 'Path to generated report'
-    value: ${{ steps.run.outputs.report-path }}
+    description: 'Path to HTML report'
+  report-md-path:
+    description: 'Path to Markdown report'
+  report-json-path:
+    description: 'Path to JSON report'
+  report-sarif-path:
+    description: 'Path to SARIF report (for GitHub Security tab)'
+
 runs:
   using: 'composite'
   steps:
-    - uses: actions/setup-node@v4
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
       with:
         node-version: 20
-    - uses: pnpm/action-setup@v4
-    - name: Install
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+
+    - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
-    - name: Build
+      working-directory: ${{ github.action_path }}/../..
+
+    - name: Build packages
       shell: bash
       run: pnpm build
-    - id: run
-      name: Audit
+      working-directory: ${{ github.action_path }}/../..
+
+    - name: Run accessibility audit
+      id: audit
       shell: bash
-      run: node packages/github-action/dist/index.mjs
+      run: node ${{ github.action_path }}/dist/index.mjs
       env:
         INPUT_URL: ${{ inputs.url }}
         INPUT_HTML_PATH: ${{ inputs.html-path }}
@@ -61,15 +85,31 @@ runs:
         INPUT_API_KEY: ${{ inputs.api-key }}
         INPUT_FORMAT: ${{ inputs.format }}
         INPUT_FAIL_ON_VIOLATIONS: ${{ inputs.fail-on-violations }}
-    - name: Upload HTML report
-      if: ${{ always() }}
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Upload reports
+      if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: a11y-ai-report
-        path: ${{ steps.run.outputs.report-path }}
-    - name: Fail if below threshold
-      if: ${{ steps.run.outputs.passed != 'true' }}
+        name: a11y-ai-reports
+        path: |
+          a11y-ai-report.html
+          a11y-ai-report.md
+          a11y-ai-report.json
+          a11y-ai-report.sarif.json
+        retention-days: 30
+
+    - name: Upload SARIF to GitHub Security
+      if: always() && hashFiles('a11y-ai-report.sarif.json') != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: a11y-ai-report.sarif.json
+        category: accessibility
+      continue-on-error: true
+
+    - name: Check threshold
+      if: steps.audit.outputs.passed != 'true'
       shell: bash
       run: |
-        echo "${{ steps.run.outputs.fail-reason }}"
+        echo "::error::Accessibility audit failed: ${{ steps.audit.outputs.fail-reason }}"
         exit 1
