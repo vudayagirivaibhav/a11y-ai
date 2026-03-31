@@ -71,18 +71,27 @@ export function findConfigFile(startDir: string): string | null {
  * Load config from disk. Supports:
  * - `.a11yairc.json`
  * - `a11y-ai.config.js` (default export or module.exports)
+ *
+ * Returns empty object if the file cannot be parsed.
  */
 export async function loadConfigFile(filePath: string): Promise<CliConfigFile> {
   if (filePath.endsWith('.json')) {
-    const raw = readFileSync(filePath, 'utf8');
-    return JSON.parse(raw) as CliConfigFile;
+    try {
+      const raw = readFileSync(filePath, 'utf8');
+      return JSON.parse(raw) as CliConfigFile;
+    } catch {
+      return {};
+    }
   }
 
   if (filePath.endsWith('.js')) {
-    const mod = await import(pathToFileURL(filePath).href);
-
-    const cfg = (mod.default ?? mod) as CliConfigFile;
-    return cfg ?? {};
+    try {
+      const mod = await import(pathToFileURL(filePath).href);
+      const cfg = (mod.default ?? mod) as CliConfigFile;
+      return cfg ?? {};
+    } catch {
+      return {};
+    }
   }
 
   return {};
@@ -90,14 +99,21 @@ export async function loadConfigFile(filePath: string): Promise<CliConfigFile> {
 
 /**
  * Merge config objects with precedence: base < overrides.
+ * Undefined values in overrides are ignored (don't override base).
  */
 export function mergeConfig(base: CliConfigFile, overrides: Partial<CliConfigFile>): CliConfigFile {
-  return {
-    ...base,
-    ...overrides,
-    rules: {
-      ...(base.rules ?? {}),
-      ...(overrides.rules ?? {}),
-    },
+  const result: CliConfigFile = { ...base };
+
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value !== undefined && key !== 'rules') {
+      (result as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  result.rules = {
+    ...(base.rules ?? {}),
+    ...(overrides.rules ?? {}),
   };
+
+  return result;
 }

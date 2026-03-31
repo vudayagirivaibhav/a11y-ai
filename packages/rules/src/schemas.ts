@@ -1,10 +1,31 @@
+/**
+ * Zod schemas for AI rule response validation.
+ *
+ * These schemas define the expected structure of AI model responses for each rule.
+ * Using Zod provides:
+ * - Runtime type validation with graceful degradation
+ * - Automatic TypeScript type inference
+ * - JSON Schema generation for AI prompt instructions
+ *
+ * @module schemas
+ */
 import { z } from 'zod';
 
+/**
+ * Base schema for all AI findings.
+ * Every finding must identify the element and provide a confidence score.
+ */
 const FindingBase = z.object({
+  /** CSS selector identifying the element */
   element: z.string(),
+  /** Confidence score from 0 (uncertain) to 1 (certain) */
   confidence: z.number().min(0).max(1).default(0.7),
 });
 
+/**
+ * Schema for AltTextRule AI response.
+ * Evaluates the quality of image alt text.
+ */
 export const AltTextQualityResponseSchema = z.object({
   results: z.array(
     FindingBase.extend({
@@ -18,6 +39,10 @@ export const AltTextQualityResponseSchema = z.object({
 
 export type AltTextQualityResponse = z.infer<typeof AltTextQualityResponseSchema>;
 
+/**
+ * Schema for vision-based image analysis.
+ * Used when AI has access to the actual image content.
+ */
 export const VisionResponseSchema = z.object({
   element: z.string(),
   imageDescription: z.string(),
@@ -28,6 +53,10 @@ export const VisionResponseSchema = z.object({
 
 export type VisionResponse = z.infer<typeof VisionResponseSchema>;
 
+/**
+ * Schema for LinkTextRule AI response.
+ * Evaluates whether link text is descriptive and meaningful.
+ */
 export const LinkTextResponseSchema = z.object({
   results: z.array(
     FindingBase.extend({
@@ -41,6 +70,10 @@ export const LinkTextResponseSchema = z.object({
 
 export type LinkTextResponse = z.infer<typeof LinkTextResponseSchema>;
 
+/**
+ * Schema for FormLabelRule AI response.
+ * Evaluates form field labels for clarity and relevance.
+ */
 export const FormLabelResponseSchema = z.object({
   results: z.array(
     FindingBase.extend({
@@ -54,6 +87,10 @@ export const FormLabelResponseSchema = z.object({
 
 export type FormLabelResponse = z.infer<typeof FormLabelResponseSchema>;
 
+/**
+ * Schema for HeadingStructureRule AI response.
+ * Evaluates document heading hierarchy and structure.
+ */
 export const HeadingOutlineResponseSchema = z.object({
   issues: z.array(z.string()),
   overallQuality: z.enum(['good', 'needs-improvement', 'poor']),
@@ -62,6 +99,10 @@ export const HeadingOutlineResponseSchema = z.object({
 
 export type HeadingOutlineResponse = z.infer<typeof HeadingOutlineResponseSchema>;
 
+/**
+ * Schema for ARIARule AI response.
+ * Evaluates ARIA attribute usage and suggests improvements.
+ */
 export const ARIAResponseSchema = z.object({
   results: z.array(
     FindingBase.extend({
@@ -75,15 +116,26 @@ export const ARIAResponseSchema = z.object({
 
 export type ARIAResponse = z.infer<typeof ARIAResponseSchema>;
 
+/**
+ * Schema for KeyboardRule AI response.
+ * Evaluates keyboard navigation and identifies potential issues.
+ */
 export const KeyboardResponseSchema = z.object({
+  /** List of keyboard navigation issues found */
   issues: z.array(z.string()),
+  /** Elements that may be unreachable via keyboard */
   unreachable: z.array(z.string()).optional(),
+  /** Potential focus trap locations */
   traps: z.array(z.string()).optional(),
   confidence: z.number().min(0).max(1).default(0.7),
 });
 
 export type KeyboardResponse = z.infer<typeof KeyboardResponseSchema>;
 
+/**
+ * Schema for LanguageRule AI response.
+ * Evaluates language clarity and readability.
+ */
 export const LanguageResponseSchema = z.object({
   issues: z.array(z.string()),
   suggestions: z.array(z.string()),
@@ -92,6 +144,10 @@ export const LanguageResponseSchema = z.object({
 
 export type LanguageResponse = z.infer<typeof LanguageResponseSchema>;
 
+/**
+ * Schema for MediaRule AI response.
+ * Evaluates media accessibility (captions, transcripts, etc.).
+ */
 export const MediaResponseSchema = z.object({
   issues: z.array(z.string()),
   suggestions: z.array(z.string()),
@@ -100,6 +156,10 @@ export const MediaResponseSchema = z.object({
 
 export type MediaResponse = z.infer<typeof MediaResponseSchema>;
 
+/**
+ * Schema for ContrastRule AI response.
+ * Used for complex backgrounds that can't be computed statically.
+ */
 export const ContrastAIResponseSchema = z.object({
   results: z.array(
     FindingBase.extend({

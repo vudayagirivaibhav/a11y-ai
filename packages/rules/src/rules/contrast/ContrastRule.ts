@@ -1,3 +1,17 @@
+/**
+ * Color contrast accessibility rule.
+ *
+ * This rule evaluates text color contrast against WCAG 2.1 guidelines.
+ * It uses a hybrid approach:
+ * 1. Static analysis for elements with solid, computable colors
+ * 2. AI analysis for complex backgrounds (gradients, images, transparency)
+ *
+ * WCAG contrast requirements:
+ * - Normal text: 4.5:1 (AA) or 7:1 (AAA)
+ * - Large text (≥18px or ≥14px bold): 3:1 (AA) or 4.5:1 (AAA)
+ *
+ * @module ContrastRule
+ */
 import type { AIProvider, ElementSnapshot } from '@a11y-ai/core/types';
 import { type RGBA, calculateContrastRatio, parseColor } from '@a11y-ai/core/utils';
 
@@ -5,6 +19,9 @@ import { BaseRule } from '../../BaseRule.js';
 import { ContrastAIResponseSchema } from '../../schemas.js';
 import type { RuleContext, RuleResult } from '../../types.js';
 
+/**
+ * Parse a CSS pixel value to a number.
+ */
 function parsePx(value: string): number | null {
   const m = value.trim().match(/^([0-9.]+)px$/i);
   if (!m) return null;
@@ -12,6 +29,9 @@ function parsePx(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Check if an element is effectively visible (not hidden via CSS).
+ */
 function isEffectivelyVisible(el: ElementSnapshot): boolean {
   const s = el.computedStyle;
   if (!s) return true;
@@ -22,6 +42,9 @@ function isEffectivelyVisible(el: ElementSnapshot): boolean {
   return true;
 }
 
+/**
+ * Check if font weight qualifies as bold (≥700 or keyword).
+ */
 function isBold(fontWeight: string | undefined): boolean {
   if (!fontWeight) return false;
   const weight = Number(fontWeight);
@@ -29,6 +52,10 @@ function isBold(fontWeight: string | undefined): boolean {
   return fontWeight === 'bold' || fontWeight === 'bolder';
 }
 
+/**
+ * Determine the required contrast ratio based on text size and WCAG level.
+ * Large text has lower requirements per WCAG guidelines.
+ */
 function contrastRequirement(
   fontSizePx: number,
   fontWeight: string | undefined,
@@ -40,13 +67,19 @@ function contrastRequirement(
   return isLarge ? 3 : 4.5;
 }
 
+/**
+ * Convert RGB values to hex color string.
+ */
 function rgbToHex(r: number, g: number, b: number): string {
   const to = (n: number) => n.toString(16).padStart(2, '0');
   return `#${to(r)}${to(g)}${to(b)}`;
 }
 
+/**
+ * Suggest a contrasting text color based on background luminance.
+ * Uses the relative luminance formula from WCAG.
+ */
 function suggestTextColor(bg: { r: number; g: number; b: number }): string {
-  // Simple luminance heuristic: prefer white on dark backgrounds and black on light.
   const luminance = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
   return luminance < 128 ? '#ffffff' : '#000000';
 }
@@ -180,6 +213,13 @@ export class ContrastRule extends BaseRule {
     return out;
   }
 
+  /**
+   * Walk up the DOM tree to find a non-transparent background color.
+   *
+   * When an element has a transparent background (alpha = 0), we need to
+   * find the nearest ancestor with an opaque background to compute
+   * the effective contrast ratio.
+   */
   private resolveParentBackground(el: ElementSnapshot, context: RuleContext): RGBA | null {
     const allElements = [
       ...context.extraction.headings,
@@ -208,6 +248,12 @@ export class ContrastRule extends BaseRule {
     return null;
   }
 
+  /**
+   * Use AI to analyze elements with complex backgrounds.
+   *
+   * This is called for elements where static analysis cannot determine
+   * the effective background color (gradients, images, transparency chains).
+   */
   private async runAIAnalysis(
     elements: ElementSnapshot[],
     context: RuleContext,
@@ -253,6 +299,9 @@ export class ContrastRule extends BaseRule {
     return out;
   }
 
+  /**
+   * Build the AI prompt for contrast analysis.
+   */
   private buildContrastAiPrompt(
     elements: ElementSnapshot[],
     context: RuleContext,

@@ -1,3 +1,20 @@
+/**
+ * Keyboard accessibility rule.
+ *
+ * This rule checks for common keyboard navigation issues:
+ * - Positive tabindex values that disrupt natural tab order
+ * - Interactive elements removed from tab order (tabindex="-1")
+ * - Click handlers on non-interactive elements without keyboard support
+ * - Disabled focus outlines without alternative indicators
+ * - Scrollable containers that aren't keyboard-accessible
+ *
+ * AI analysis supplements static checks by evaluating:
+ * - Logical tab order issues
+ * - Potential focus traps
+ * - Unreachable interactive elements
+ *
+ * @module KeyboardRule
+ */
 import type { AIProvider, ElementSnapshot } from '@a11y-ai/core/types';
 
 import { BaseRule } from '../../BaseRule.js';
@@ -5,6 +22,9 @@ import { KeyboardResponseSchema } from '../../schemas.js';
 import type { RuleContext, RuleResult } from '../../types.js';
 import { type TabEntry, buildTabOrder } from './tabOrder.js';
 
+/**
+ * Check if an element is natively keyboard-interactive.
+ */
 function isInteractiveNative(tagName: string): boolean {
   const tag = tagName.toLowerCase();
   return (
@@ -12,6 +32,9 @@ function isInteractiveNative(tagName: string): boolean {
   );
 }
 
+/**
+ * Extract numeric tabindex value from attributes.
+ */
 function tabIndexValue(attrs: Record<string, string>): number | null {
   const raw = attrs.tabindex ?? attrs.tabIndex;
   if (typeof raw !== 'string') return null;
@@ -19,10 +42,16 @@ function tabIndexValue(attrs: Record<string, string>): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Check if element has an inline click handler.
+ */
 function hasClickHandler(attrs: Record<string, string>): boolean {
   return typeof attrs.onclick === 'string' || typeof attrs.onClick === 'string';
 }
 
+/**
+ * Check if element has inline keyboard event handlers.
+ */
 function hasKeyboardHandler(attrs: Record<string, string>): boolean {
   return (
     typeof attrs.onkeydown === 'string' ||
@@ -34,15 +63,24 @@ function hasKeyboardHandler(attrs: Record<string, string>): boolean {
   );
 }
 
+/**
+ * Check if element has an ARIA role attribute.
+ */
 function hasRole(attrs: Record<string, string>): boolean {
   return typeof attrs.role === 'string' && attrs.role.trim().length > 0;
 }
 
+/**
+ * Check if element has focus outline disabled via inline styles.
+ */
 function hasOutlineNone(attrs: Record<string, string>): boolean {
   const style = (attrs.style ?? '').toLowerCase();
   return /\boutline\s*:\s*(none|0)\b/.test(style);
 }
 
+/**
+ * Check if element is a scrollable container.
+ */
 function isScrollable(attrs: Record<string, string>): boolean {
   const style = (attrs.style ?? '').toLowerCase();
   return (
@@ -186,6 +224,13 @@ export class KeyboardRule extends BaseRule {
     return out;
   }
 
+  /**
+   * Run AI analysis on keyboard navigation patterns.
+   *
+   * The AI evaluates the computed tab order and element attributes
+   * to identify issues that static analysis cannot detect, such as
+   * illogical navigation sequences or potential focus traps.
+   */
   private async runAIAnalysis(
     candidates: ElementSnapshot[],
     tabOrder: TabEntry[],
@@ -226,6 +271,9 @@ export class KeyboardRule extends BaseRule {
     ];
   }
 
+  /**
+   * Build the AI prompt for keyboard navigation analysis.
+   */
   private buildKeyboardPrompt(
     elements: ElementSnapshot[],
     tabOrder: TabEntry[],

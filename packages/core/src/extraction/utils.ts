@@ -166,6 +166,10 @@ export function attributesToRecord(element: Element): Record<string, string> {
   return attrs;
 }
 
+/**
+ * Valid ARIA landmark roles as defined by WAI-ARIA.
+ * Used to identify semantic page regions for navigation.
+ */
 const LANDMARK_ROLES = new Set([
   'main',
   'navigation',
@@ -177,6 +181,10 @@ const LANDMARK_ROLES = new Set([
   'region',
 ]);
 
+/**
+ * Mapping of HTML5 semantic elements to their implicit ARIA landmark roles.
+ * These elements have built-in landmark semantics without explicit role attributes.
+ */
 const LANDMARK_TAGS: Record<string, string> = {
   main: 'main',
   nav: 'navigation',
@@ -188,7 +196,13 @@ const LANDMARK_TAGS: Record<string, string> = {
 
 /**
  * Walk up the DOM tree to find the nearest landmark ancestor.
- * Returns the landmark role name or null.
+ *
+ * Landmarks provide important context for AI rules to understand
+ * where an element appears in the page structure (e.g., navigation,
+ * main content, footer).
+ *
+ * @param element - The element to find the landmark for
+ * @returns The landmark role name or null if not within a landmark
  */
 export function getLandmark(element: Element): string | null {
   let current: Element | null = element.parentElement;
@@ -202,6 +216,10 @@ export function getLandmark(element: Element): string | null {
   return null;
 }
 
+/**
+ * Block-level elements that typically contain meaningful text content.
+ * Used to find surrounding context for elements.
+ */
 const BLOCK_TAGS = new Set([
   'p',
   'div',
@@ -216,7 +234,15 @@ const BLOCK_TAGS = new Set([
 ]);
 
 /**
- * Get the text content of the nearest block-level ancestor, trimmed to maxLength.
+ * Get the text content of the nearest block-level ancestor.
+ *
+ * This provides contextual information for AI rules to better understand
+ * what an element relates to (e.g., the paragraph containing an image
+ * helps determine if alt text is appropriate).
+ *
+ * @param element - The element to get surrounding text for
+ * @param maxLength - Maximum characters to return (default: 200)
+ * @returns Normalized text content from the nearest block ancestor
  */
 export function getSurroundingText(element: Element, maxLength = 200): string {
   let current: Element | null = element.parentElement;

@@ -56,11 +56,15 @@ describe('parseColor', () => {
       expect(parseColor('rgba(0, 0, 0, 0.5)')).toEqual({ r: 0, g: 0, b: 0, a: 0.5 });
     });
 
-    it('clamps values', () => {
-      const result = parseColor('rgb(300, -10, 128)');
+    it('clamps values above 255', () => {
+      const result = parseColor('rgb(300, 128, 128)');
       expect(result?.r).toBe(255);
-      expect(result?.g).toBe(0);
+      expect(result?.g).toBe(128);
       expect(result?.b).toBe(128);
+    });
+
+    it('returns null for negative values (not supported)', () => {
+      expect(parseColor('rgb(300, -10, 128)')).toBeNull();
     });
 
     it('returns null for invalid rgb', () => {

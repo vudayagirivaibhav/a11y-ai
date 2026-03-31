@@ -15,15 +15,26 @@ export interface ScoreComparison {
 
   /** High-level direction derived from `delta`. */
   direction: 'improved' | 'regressed' | 'unchanged';
+
+  /** Change in total violation count (negative = fewer violations = improvement). */
+  violationsDelta: number;
 }
 
 /**
- * Compare two `AuditResult` objects by their summary score.
+ * Compare two `AuditResult` objects by their summary score and violation counts.
  */
-export function compareWith(previous: AuditResult, current: AuditResult): ScoreComparison {
-  const previousScore = previous.summary.score;
-  const currentScore = current.summary.score;
+export function compareWith(
+  previous: Partial<AuditResult>,
+  current: Partial<AuditResult>,
+): ScoreComparison {
+  const previousScore = previous.summary?.score ?? 0;
+  const currentScore = current.summary?.score ?? 0;
   const delta = currentScore - previousScore;
   const direction = delta === 0 ? 'unchanged' : delta > 0 ? 'improved' : 'regressed';
-  return { previousScore, currentScore, delta, direction };
+
+  const previousViolations = previous.mergedViolations?.length ?? 0;
+  const currentViolations = current.mergedViolations?.length ?? 0;
+  const violationsDelta = currentViolations - previousViolations;
+
+  return { previousScore, currentScore, delta, direction, violationsDelta };
 }

@@ -1,14 +1,30 @@
+/**
+ * AI response caching layer for the auditor.
+ *
+ * Caches complete AI analysis results (findings, raw response, token usage)
+ * to avoid redundant API calls for identical prompts. This is particularly
+ * valuable during development and for repeated audits of similar content.
+ *
+ * @module cacheProvider
+ */
 import type { AIAnalysisResult, AIProvider, RuleContext } from '../types/provider.js';
 import type { CacheAdapter } from '../types/cache.js';
 
 import { sha256Hex } from '../utils/hash.js';
 
+/**
+ * Structure stored in the cache.
+ * Includes all data needed to reconstruct an AIAnalysisResult.
+ */
 interface CachedAIResult {
   findings: AIAnalysisResult['findings'];
   raw: string;
   usage?: AIAnalysisResult['usage'];
 }
 
+/**
+ * Serialize an AI result for cache storage.
+ */
 function serializeResult(result: AIAnalysisResult): string {
   const cached: CachedAIResult = {
     findings: result.findings,
@@ -18,6 +34,10 @@ function serializeResult(result: AIAnalysisResult): string {
   return JSON.stringify(cached);
 }
 
+/**
+ * Deserialize a cached AI result.
+ * Returns null if the cached data is invalid or corrupted.
+ */
 function deserializeResult(cached: string): AIAnalysisResult | null {
   try {
     const parsed = JSON.parse(cached) as CachedAIResult;
