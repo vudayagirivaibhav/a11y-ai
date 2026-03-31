@@ -45,6 +45,7 @@ export function createAIProvider(config: AiProviderConfig): AIProvider {
         },
       };
     }
+    case 'mock':
     default:
       return new MockAIProvider(config);
   }

@@ -112,8 +112,8 @@ describe('CLI config utilities', () => {
 describe('CLI compare utilities', () => {
   describe('compareWith', () => {
     it('calculates positive delta when score improves', () => {
-      const previous = { summary: { score: 70 } };
-      const current = { summary: { score: 85 } };
+      const previous = { summary: { score: 70 } } as Parameters<typeof compareWith>[0];
+      const current = { summary: { score: 85 } } as Parameters<typeof compareWith>[1];
 
       const result = compareWith(previous, current);
       expect(result.previousScore).toBe(70);
@@ -123,8 +123,8 @@ describe('CLI compare utilities', () => {
     });
 
     it('calculates negative delta when score regresses', () => {
-      const previous = { summary: { score: 85 } };
-      const current = { summary: { score: 70 } };
+      const previous = { summary: { score: 85 } } as Parameters<typeof compareWith>[0];
+      const current = { summary: { score: 70 } } as Parameters<typeof compareWith>[1];
 
       const result = compareWith(previous, current);
       expect(result.previousScore).toBe(85);
@@ -134,8 +134,8 @@ describe('CLI compare utilities', () => {
     });
 
     it('reports unchanged when scores are equal', () => {
-      const previous = { summary: { score: 80 } };
-      const current = { summary: { score: 80 } };
+      const previous = { summary: { score: 80 } } as Parameters<typeof compareWith>[0];
+      const current = { summary: { score: 80 } } as Parameters<typeof compareWith>[1];
 
       const result = compareWith(previous, current);
       expect(result.delta).toBe(0);
@@ -143,8 +143,8 @@ describe('CLI compare utilities', () => {
     });
 
     it('handles missing summary gracefully', () => {
-      const previous = {};
-      const current = { summary: { score: 80 } };
+      const previous = {} as Parameters<typeof compareWith>[0];
+      const current = { summary: { score: 80 } } as Parameters<typeof compareWith>[1];
 
       const result = compareWith(previous, current);
       expect(result.previousScore).toBe(0);
@@ -155,11 +155,11 @@ describe('CLI compare utilities', () => {
       const previous = {
         summary: { score: 80, totalViolations: 10 },
         mergedViolations: Array(10).fill({ severity: 'moderate' }),
-      };
+      } as Parameters<typeof compareWith>[0];
       const current = {
         summary: { score: 85, totalViolations: 5 },
         mergedViolations: Array(5).fill({ severity: 'moderate' }),
-      };
+      } as Parameters<typeof compareWith>[1];
 
       const result = compareWith(previous, current);
       expect(result.violationsDelta).toBe(-5);

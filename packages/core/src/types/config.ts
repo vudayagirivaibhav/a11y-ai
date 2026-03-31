@@ -51,7 +51,7 @@ export type RuleFilter = {
  */
 export type AiProviderConfig = {
   /** Which provider implementation to use. */
-  provider: 'openai' | 'anthropic' | 'ollama' | 'custom';
+  provider: 'openai' | 'anthropic' | 'ollama' | 'custom' | 'mock';
 
   /** Provider API key (if required). */
   apiKey?: string;
