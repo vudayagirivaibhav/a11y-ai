@@ -1,6 +1,6 @@
 {
   "name": "@a11y-ai/github-action",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GitHub Action for running a11y-ai audits in CI.",
   "license": "MIT",
   "type": "module",

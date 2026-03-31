@@ -1,6 +1,6 @@
 {
   "name": "@a11y-ai/playground",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "description": "Interactive playground for AI-powered accessibility auditing.",
